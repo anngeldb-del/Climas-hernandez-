@@ -100,19 +100,22 @@ async function mountNewQuote() {
       <h3>Conceptos</h3>
       <div id="quote-lines"></div>
 
-      <div class="grid grid--form" style="margin-top:16px">
-        <div class="field">
-          <label class="flex items-center gap-2"><input type="checkbox" id="tax-enabled" /> Incluir IVA (16%)</label>
+      <details class="collapsible">
+        <summary>Impuestos (opcional)</summary>
+        <div class="collapsible__body grid grid--form">
+          <div class="field">
+            <label class="flex items-center gap-2"><input type="checkbox" id="tax-enabled" /> Incluir IVA (16%)</label>
+          </div>
+          <div class="field">
+            <label class="flex items-center gap-2"><input type="checkbox" id="isr-enabled" /> Aplicar retención de ISR</label>
+          </div>
+          <div class="field" id="isr-rate-field" style="display:none">
+            <label class="field__label">Porcentaje de retención</label>
+            <input class="input" type="number" id="isr-rate" min="0" max="100" step="0.25" value="${DEFAULT_ISR_RATE}" />
+            <span class="field__hint">Incrementos de 0.25 — ajusta si tu caso usa otro porcentaje</span>
+          </div>
         </div>
-        <div class="field">
-          <label class="flex items-center gap-2"><input type="checkbox" id="isr-enabled" /> Aplicar retención de ISR</label>
-        </div>
-        <div class="field" id="isr-rate-field" style="display:none">
-          <label class="field__label">Porcentaje de retención</label>
-          <input class="input" type="number" id="isr-rate" min="0" max="100" step="0.25" value="${DEFAULT_ISR_RATE}" />
-          <span class="field__hint">Incrementos de 0.25 — ajusta si tu caso usa otro porcentaje</span>
-        </div>
-      </div>
+      </details>
 
       <div class="text-right section" id="totals-preview"></div>
 

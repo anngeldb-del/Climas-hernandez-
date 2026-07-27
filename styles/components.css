@@ -313,6 +313,23 @@ table.table tbody tr[data-clickable] { cursor: pointer; }
   .calendar-cell { min-height: 64px; font-size: var(--font-size-xs); }
 }
 
+/* ---- Collapsible "more options" section (native <details>/<summary>) --------------------
+   Used to hide secondary fields (technician assignment, taxes...) behind
+   one click so the common path through a form stays short — no JS needed,
+   the browser already handles open/close state and accessibility. */
+details.collapsible {
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  margin: var(--space-4) 0; background: var(--color-surface-alt);
+}
+details.collapsible summary {
+  cursor: pointer; padding: var(--space-3) var(--space-4); font-weight: 600; font-size: var(--font-size-sm);
+  color: var(--color-text-muted); list-style: none; display: flex; align-items: center; gap: var(--space-2);
+}
+details.collapsible summary::-webkit-details-marker { display: none; }
+details.collapsible summary::before { content: '▸'; transition: transform var(--transition-fast); }
+details.collapsible[open] summary::before { transform: rotate(90deg); }
+details.collapsible .collapsible__body { padding: 0 var(--space-4) var(--space-4); }
+
 /* ---- Loader ------------------------------------------------------------------------- */
 .spinner {
   width: 20px; height: 20px; border: 3px solid var(--color-border);
