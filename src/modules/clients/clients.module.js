@@ -7,7 +7,7 @@
 
 import { subscribeClients, createClient, updateClient, deleteClient, getClient } from './clients.service.js';
 import {
-  subscribeVehiclesByClient, createVehicle, vehicleLabel
+  subscribeVehiclesByClient, subscribeAllVehicles, createVehicle, vehicleLabel
 } from '../vehicles/vehicles.service.js';
 import { getAll } from '../../core/db.service.js';
 import { where, orderBy } from '../../core/firebase.init.js';
@@ -18,7 +18,19 @@ import { buildForm, readForm, validateForm } from '../../components/ui/form-buil
 import { showToast } from '../../components/ui/toast.js';
 import { icon } from '../../components/ui/icons.js';
 import { navigate } from '../../core/router.js';
-import { debounce, normalizeText, waLink, formatDate } from '../../core/utils.js';
+import { debounce, normalizeText, waLink, formatDate, escapeHtml } from '../../core/utils.js';
+
+/** clientId -> vehicle[], kept live so the list shows every vehicle a
+ * multi-car client owns without opening their detail page. */
+let vehiclesByClient = new Map();
+function groupVehiclesByClient(vehicles) {
+  const map = new Map();
+  for (const v of vehicles) {
+    if (!map.has(v.clientId)) map.set(v.clientId, []);
+    map.get(v.clientId).push(v);
+  }
+  return map;
+}
 
 let unsubscribers = [];
 let container = null;
@@ -84,7 +96,13 @@ function renderClientsList(rows) {
       ` : '—'
       },
       { key: 'email', label: 'Correo', render: (c) => c.email || '—' },
-      { key: 'vehicleCount', label: 'Vehículos', align: 'center', render: (c) => c.vehicleCount || 0 }
+      {
+        key: 'vehicleCount', label: 'Vehículos', sortable: false, render: (c) => {
+          const vehicles = vehiclesByClient.get(c.id) || [];
+          if (!vehicles.length) return '—';
+          return vehicles.map((v) => `<span class="badge badge--neutral" style="margin:2px 4px 2px 0">${escapeHtml(vehicleLabel(v))}</span>`).join('');
+        }
+      }
     ],
     rows,
     sortKey, sortDir,
@@ -127,6 +145,7 @@ function mountList() {
   }, 200));
 
   trackUnsub(subscribeClients((rows) => { allClients = rows; applyFilterAndRender(); }));
+  trackUnsub(subscribeAllVehicles((vehicles) => { vehiclesByClient = groupVehiclesByClient(vehicles); applyFilterAndRender(); }));
 }
 
 // ---------------------------------------------------------------------
