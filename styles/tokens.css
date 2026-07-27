@@ -1,0 +1,99 @@
+/**
+ * tokens.css
+ * -----------------------------------------------------------------------
+ * Design tokens: the single palette/spacing/typography scale every other
+ * stylesheet draws from. Change a brand color here, it propagates
+ * everywhere — no other file should hard-code a hex value.
+ *
+ * Theming: light is the default (:root). Dark overrides live under
+ * `html[data-theme="dark"]`. The theme is chosen once in core/theme.js
+ * (localStorage, falling back to the OS preference) and stamped onto
+ * <html data-theme="..."> before first paint to avoid a flash.
+ */
+
+:root {
+  /* ---- Brand palette ------------------------------------------------ */
+  --color-brand-fresh: #2596d1;      /* azul fresco — primary brand blue */
+  --color-brand-fresh-dark: #1c78ab;
+  --color-brand-intense: #0d4782;    /* azul intenso — primary buttons */
+  --color-brand-intense-dark: #093a6b;
+
+  /* ---- Semantic state colors ----------------------------------------- */
+  --color-success: #1f9d63;
+  --color-warning: #d98c0e;
+  --color-danger: #d1403a;
+  --color-info: #2596d1;
+  --color-accent: #12b3ac;
+
+  /* ---- Light theme surface/text ---------------------------------------- */
+  --color-bg: #f4f6f8;              /* gris claro */
+  --color-surface: #ffffff;         /* blanco */
+  --color-surface-alt: #eef1f4;
+  --color-border: #dde3e9;
+  --color-text: #1f2933;            /* gris oscuro */
+  --color-text-muted: #5b6673;
+  --color-primary: var(--color-brand-intense);
+  --color-primary-hover: var(--color-brand-intense-dark);
+  --color-primary-contrast: #ffffff;
+  --color-accent-soft: #e4f4fb;
+
+  /* ---- Elevation ------------------------------------------------------- */
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-md: 0 4px 12px rgba(16, 24, 40, 0.08);
+  --shadow-lg: 0 12px 32px rgba(16, 24, 40, 0.14);
+
+  /* ---- Shape ------------------------------------------------------------ */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* ---- Spacing scale (4px base) ----------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* ---- Typography --------------------------------------------------------- */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.375rem;
+  --font-size-2xl: 1.75rem;
+  --font-size-3xl: 2.25rem;
+
+  /* ---- Motion (discreet, per spec) --------------------------------------- */
+  --transition-fast: 120ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 320ms ease;
+
+  --sidebar-width: 264px;
+  --topbar-height: 64px;
+  --z-topbar: 100;
+  --z-sidebar: 90;
+  --z-modal: 1000;
+  --z-toast: 1100;
+}
+
+html[data-theme='dark'] {
+  --color-bg: #0b1220;
+  --color-surface: #121b2e;
+  --color-surface-alt: #182238;
+  --color-border: #253044;
+  --color-text: #e7edf5;
+  --color-text-muted: #93a1b5;
+  --color-primary: #2c8fd6;
+  --color-primary-hover: #4aa3e0;
+  --color-primary-contrast: #ffffff;
+  --color-accent-soft: #133045;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
+}

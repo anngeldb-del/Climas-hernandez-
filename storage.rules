@@ -1,0 +1,48 @@
+rules_version = '2';
+
+// ---------------------------------------------------------------------------
+// Storage security rules — Autoclimas Hernández
+//
+// Layout:
+//   /vehicles/{vehicleId}/{fileName}                  vehicle photos
+//   /service-orders/{orderId}/before/{fileName}       "before" photos
+//   /service-orders/{orderId}/after/{fileName}        "after" photos
+//   /service-orders/{orderId}/signatures/{fileName}   client/technician signatures
+//   /warranties/{warrantyId}/{fileName}               warranty evidence
+//
+// Only signed-in users with an active profile may read or write, and every
+// upload is capped in size/type to avoid abuse of the bucket.
+// ---------------------------------------------------------------------------
+
+function isSignedIn() {
+  return request.auth != null;
+}
+
+function isActiveUser() {
+  return isSignedIn() &&
+    firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.active == true;
+}
+
+function isValidImage() {
+  return request.resource.size < 10 * 1024 * 1024 &&
+    request.resource.contentType.matches('image/.*');
+}
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /vehicles/{vehicleId}/{fileName} {
+      allow read: if isActiveUser();
+      allow write: if isActiveUser() && isValidImage();
+    }
+
+    match /service-orders/{orderId}/{subPath=**} {
+      allow read: if isActiveUser();
+      allow write: if isActiveUser() && isValidImage();
+    }
+
+    match /warranties/{warrantyId}/{fileName} {
+      allow read: if isActiveUser();
+      allow write: if isActiveUser() && isValidImage();
+    }
+  }
+}

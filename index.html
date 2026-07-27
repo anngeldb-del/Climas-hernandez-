@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Autoclimas Hernández — Administración</title>
+  <meta name="description" content="Sistema de administración para taller de reparación y mantenimiento de clima y calefacción automotriz — Autoclimas Hernández, Torreón, Coah." />
+  <meta name="theme-color" content="#0d4782" />
+  <meta name="color-scheme" content="light dark" />
+
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16.png" />
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
+
+  <link rel="stylesheet" href="styles/tokens.css" />
+  <link rel="stylesheet" href="styles/base.css" />
+  <link rel="stylesheet" href="styles/layout.css" />
+  <link rel="stylesheet" href="styles/components.css" />
+  <link rel="stylesheet" href="styles/themes.css" />
+
+  <!--
+    Applies the saved/OS theme before the first paint so there is no
+    flash of the wrong theme while src/app.js (a deferred module) loads.
+    Kept intentionally in sync with core/theme.service.js's STORAGE_KEY.
+  -->
+  <script>
+    (function () {
+      var saved = localStorage.getItem('autoclimas.theme');
+      var theme = saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+<body>
+  <div id="app-root">
+    <div class="auth-screen">
+      <div class="spinner" style="width:32px;height:32px;border-width:4px"></div>
+    </div>
+  </div>
+
+  <noscript>
+    <div style="padding:2rem;font-family:system-ui;text-align:center">
+      Esta aplicación requiere JavaScript habilitado para funcionar.
+    </div>
+  </noscript>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
