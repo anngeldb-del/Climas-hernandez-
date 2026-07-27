@@ -263,6 +263,27 @@ table.table tbody tr[data-clickable] { cursor: pointer; }
 }
 .alert--danger { background: rgba(209, 64, 58, 0.1); border-color: rgba(209, 64, 58, 0.35); color: var(--color-danger); }
 
+/* ---- Agenda calendar ------------------------------------------------------------------ */
+.calendar-weekdays {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--space-2);
+  text-align: center; font-size: var(--font-size-xs); color: var(--color-text-muted);
+  text-transform: uppercase; margin-bottom: var(--space-2);
+}
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--space-2); }
+.calendar-cell {
+  min-height: 96px; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  padding: var(--space-2); cursor: pointer; transition: background var(--transition-fast); overflow: hidden;
+}
+.calendar-cell:hover { background: var(--color-surface-alt); }
+.calendar-cell--empty { border: none; cursor: default; }
+.calendar-cell--empty:hover { background: none; }
+.calendar-cell--today { border-color: var(--color-brand-fresh); box-shadow: 0 0 0 1px var(--color-brand-fresh); }
+.calendar-cell__num { font-weight: 700; font-size: var(--font-size-sm); margin-bottom: var(--space-1); }
+
+@media (max-width: 720px) {
+  .calendar-cell { min-height: 64px; font-size: var(--font-size-xs); }
+}
+
 /* ---- Loader ------------------------------------------------------------------------- */
 .spinner {
   width: 20px; height: 20px; border: 3px solid var(--color-border);
