@@ -37,7 +37,7 @@ const NAV_SECTIONS = [
   {
     title: 'Taller',
     items: [
-      { key: 'service-orders', label: 'Órdenes de servicio', icon: 'order' },
+      { key: 'service-orders', label: 'Órdenes', icon: 'order' },
       { key: 'clients', label: 'Clientes', icon: 'clients' },
       { key: 'vehicles', label: 'Vehículos', icon: 'vehicle' },
       { key: 'warranties', label: 'Garantías', icon: 'warranty' }
@@ -48,7 +48,7 @@ const NAV_SECTIONS = [
     items: [
       { key: 'quotes', label: 'Cotizaciones', icon: 'quote' },
       { key: 'payments', label: 'Pagos', icon: 'payments' },
-      { key: 'catalog', label: 'Catálogo de servicios', icon: 'catalog' },
+      { key: 'catalog', label: 'Catálogo', icon: 'catalog' },
       { key: 'inventory', label: 'Inventario', icon: 'inventory' },
       { key: 'reports', label: 'Reportes', icon: 'reports' }
     ]
