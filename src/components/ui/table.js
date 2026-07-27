@@ -30,7 +30,10 @@ export function renderTable(container, {
   const tbody = rows.map((row) => {
     const cells = columns.map((col) => {
       const value = col.render ? col.render(row) : escapeHtml(row[col.key] ?? '—');
-      return `<td style="${col.align ? `text-align:${col.align}` : ''}">${value}</td>`;
+      // data-label powers the mobile "stacked card" layout (see components.css)
+      // where each cell shows its column name next to the value instead of
+      // relying on a header row that no longer fits a phone's width.
+      return `<td data-label="${escapeHtml(col.label)}" style="${col.align ? `text-align:${col.align}` : ''}">${value}</td>`;
     }).join('');
     return `<tr data-id="${row.id ?? ''}" ${onRowClick ? 'data-clickable' : ''}>${cells}</tr>`;
   }).join('');

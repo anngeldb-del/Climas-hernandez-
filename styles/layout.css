@@ -172,7 +172,6 @@
      bottom bar — the rest live behind "Más" so the bar never fights the
      phone's width for room (see shell.js PRIMARY_MOBILE_KEYS). */
   .sidebar__nav > .nav-item:not([data-primary]) { display: none; }
-  .nav-item--more { display: flex; }
   .sidebar__section-title { display: none; }
   .nav-item__label { display: block; font-size: 10px; }
   .nav-item { flex-direction: column; gap: 2px; padding: var(--space-1); min-width: 0; }
@@ -189,6 +188,31 @@
 
   .activity-row { flex-direction: column; align-items: flex-start; gap: var(--space-1); }
   .activity-row__meta { text-align: left; }
+
+  /* Tables -> stacked cards. Every list screen (clients, orders, inventory,
+     payments, quotes, catalog, users, audit) and the parts/concepts editor
+     share the same .table component, so this one change makes all of them
+     usable on a phone instead of needing horizontal scrolling. */
+  .table-wrap { overflow-x: visible; border: none; }
+  table.table thead { display: none; }
+  table.table, table.table tbody, table.table tr, table.table td { display: block; width: 100%; }
+  table.table tr {
+    border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    margin-bottom: var(--space-3); padding: var(--space-3); background: var(--color-surface);
+  }
+  table.table td {
+    border: none; padding: var(--space-1) 0;
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+    text-align: right;
+  }
+  table.table td[data-label]::before {
+    content: attr(data-label); font-weight: 600; color: var(--color-text-muted); text-align: left; flex-shrink: 0;
+  }
+  /* Editable cells (parts/concepts editor) need room for the input, so they
+     stack label-above-field instead of the compact label/value row. */
+  table.table td:has(input), table.table td:has(select) {
+    flex-direction: column; align-items: stretch; text-align: left; gap: var(--space-1);
+  }
 }
 
 /* ---- Print (service orders / quotes) ----------------------------------- */
