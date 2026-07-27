@@ -31,10 +31,14 @@ const CARD_DEFS = [
   { key: 'delayed', label: 'Servicios retrasados', icon: 'clock', format: (v) => v }
 ];
 
+/** Rotating light-to-dark blue accent for the stat-card top cap — variety
+ * without leaving the brand's blue palette for unrelated hues. */
+const STAT_ACCENTS = ['#7dd3fc', '#38bdf8', '#2596d1', '#0d4782', '#093a6b', '#5aa9dd'];
+
 function renderCards(stats) {
   const grid = container.querySelector('#stat-grid');
-  grid.innerHTML = CARD_DEFS.map((def) => `
-    <div class="stat-card">
+  grid.innerHTML = CARD_DEFS.map((def, i) => `
+    <div class="stat-card" style="--stat-accent:${STAT_ACCENTS[i % STAT_ACCENTS.length]}">
       <div class="stat-card__icon">${icon(def.icon, { size: 22 })}</div>
       <div>
         <div class="stat-card__value">${def.format(stats[def.key] ?? 0)}</div>

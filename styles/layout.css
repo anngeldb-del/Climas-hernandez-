@@ -172,6 +172,7 @@
      bottom bar — the rest live behind "Más" so the bar never fights the
      phone's width for room (see shell.js PRIMARY_MOBILE_KEYS). */
   .sidebar__nav > .nav-item:not([data-primary]) { display: none; }
+  .nav-item--more { display: flex; }
   .sidebar__section-title { display: none; }
   .nav-item__label { display: block; font-size: 10px; }
   .nav-item { flex-direction: column; gap: 2px; padding: var(--space-1); min-width: 0; }
