@@ -53,12 +53,12 @@ function renderActivity(stats) {
   list.innerHTML = stats.recentActivity.map((order) => {
     const meta = ORDER_STATUS_META[order.status] || { label: order.status, color: 'neutral' };
     return `
-      <div class="flex items-center justify-between" style="padding:10px 0;border-bottom:1px solid var(--color-border)">
+      <div class="activity-row">
         <div>
           <strong>${order.folioLabel || order.id}</strong>
           <div class="text-sm text-muted">${order.clientName || ''} · ${order.vehicleLabel || ''}</div>
         </div>
-        <div class="text-right">
+        <div class="activity-row__meta">
           <span class="badge badge--${meta.color}">${meta.label}</span>
           <div class="text-xs text-muted">${formatDateTime(order.updatedAt)}</div>
         </div>
