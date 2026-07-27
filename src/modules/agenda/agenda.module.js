@@ -8,7 +8,7 @@
  */
 
 import {
-  subscribeAppointments, createAppointment, updateAppointment, deleteAppointment, getScheduledDeliveries
+  subscribeAppointments, createAppointment, deleteAppointment, getScheduledDeliveries
 } from './agenda.service.js';
 import { openModal, confirmDialog } from '../../components/ui/modal.js';
 import { buildForm, readForm, validateForm } from '../../components/ui/form-builder.js';

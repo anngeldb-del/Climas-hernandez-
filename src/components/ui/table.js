@@ -9,7 +9,7 @@
  * Column shape: { key, label, sortable=true, render?(row) => string, align }
  */
 
-import { escapeHtml } from '../../core/utils.js';
+import { escapeHtml, toDate } from '../../core/utils.js';
 
 export function renderTable(container, {
   columns, rows, sortKey, sortDir = 'asc', onSort, onRowClick, emptyMessage = 'Sin resultados'
@@ -60,13 +60,25 @@ export function renderTable(container, {
   }
 }
 
-/** Generic in-memory sort helper shared by every list module. */
+/**
+ * Generic in-memory sort helper shared by every list module. Firestore
+ * Timestamps (and Dates, and date-like ISO strings) are detected and
+ * compared as actual instants — comparing their raw string/object form
+ * would sort lexicographically instead of chronologically (e.g. a
+ * Timestamp's default toString() breaks badly around magnitude changes
+ * in its seconds count).
+ */
 export function sortRows(rows, key, dir = 'asc') {
   const factor = dir === 'asc' ? 1 : -1;
   return [...rows].sort((a, b) => {
     const av = a[key], bv = b[key];
     if (av == null) return 1;
     if (bv == null) return -1;
+
+    const aDate = toDate(av);
+    const bDate = toDate(bv);
+    if (aDate && bDate) return (aDate.getTime() - bDate.getTime()) * factor;
+
     if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * factor;
     return String(av).localeCompare(String(bv), 'es') * factor;
   });
