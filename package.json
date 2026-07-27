@@ -1,0 +1,11 @@
+{
+  "name": "autoclimas-hernandez-app",
+  "version": "1.0.0",
+  "description": "Sistema de administración para Autoclimas Hernández — reparación y mantenimiento de clima y calefacción automotriz.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "npx serve .",
+    "deploy": "firebase deploy --only hosting,firestore:rules,firestore:indexes,storage"
+  }
+}

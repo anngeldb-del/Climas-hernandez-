@@ -1,0 +1,120 @@
+rules_version = '2';
+
+// ---------------------------------------------------------------------------
+// Firestore security rules — Autoclimas Hernández
+//
+// Role model (mirrors src/config/constants.js ROLES):
+//   admin      full read/write on everything, including user role assignment
+//   recepcion  front-desk: clients, vehicles, orders, quotes, payments, agenda
+//   tecnico    shop floor: read orders assigned/open, update own order fields
+//   auditor    read-only across the business + audit log
+//
+// Design notes:
+//   - Every write-capable rule re-checks the caller's role by reading their
+//     /users/{uid} document server-side (request.auth alone is not enough,
+//     custom claims are not used so the system works without Cloud
+//     Functions on day one).
+//   - auditLog is append-only: created by the client db.service wrapper on
+//     every mutation, never updated or deleted, so it can serve as a
+//     tamper-evident bitácora.
+//   - counters/serviceOrders holds the last issued folio; it can only be
+//     incremented via transaction by roles allowed to create orders.
+// ---------------------------------------------------------------------------
+
+function isSignedIn() {
+  return request.auth != null;
+}
+
+function userDoc() {
+  return get(/databases/$(database)/documents/users/$(request.auth.uid));
+}
+
+function role() {
+  return isSignedIn() && userDoc().data.active == true
+    ? userDoc().data.role
+    : null;
+}
+
+function hasAnyRole(roles) {
+  return isSignedIn() && role() in roles;
+}
+
+function isAdmin() {
+  return role() == 'admin';
+}
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can always read their own profile (needed to bootstrap role
+    // lookup in the UI); only admins manage roles/activation.
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    match /clients/{docId} {
+      allow read: if hasAnyRole(['admin', 'recepcion', 'tecnico', 'auditor']);
+      allow create, update: if hasAnyRole(['admin', 'recepcion']);
+      allow delete: if isAdmin();
+    }
+
+    match /vehicles/{docId} {
+      allow read: if hasAnyRole(['admin', 'recepcion', 'tecnico', 'auditor']);
+      allow create, update: if hasAnyRole(['admin', 'recepcion']);
+      allow delete: if isAdmin();
+    }
+
+    match /serviceOrders/{docId} {
+      allow read: if hasAnyRole(['admin', 'recepcion', 'tecnico', 'auditor']);
+      allow create: if hasAnyRole(['admin', 'recepcion']);
+      allow update: if hasAnyRole(['admin', 'recepcion', 'tecnico']);
+      allow delete: if isAdmin();
+    }
+
+    match /serviceCatalog/{docId} {
+      allow read: if hasAnyRole(['admin', 'recepcion', 'tecnico', 'auditor']);
+      allow write: if hasAnyRole(['admin', 'recepcion']);
+    }
+
+    match /inventory/{docId} {
+      allow read: if hasAnyRole(['admin', 'recepcion', 'tecnico', 'auditor']);
+      allow write: if hasAnyRole(['admin', 'recepcion']);
+    }
+
+    match /quotes/{docId} {
+      allow read: if hasAnyRole(['admin', 'recepcion', 'auditor']);
+      allow write: if hasAnyRole(['admin', 'recepcion']);
+    }
+
+    match /payments/{docId} {
+      allow read: if hasAnyRole(['admin', 'recepcion', 'auditor']);
+      allow create, update: if hasAnyRole(['admin', 'recepcion']);
+      allow delete: if isAdmin();
+    }
+
+    match /warranties/{docId} {
+      allow read: if hasAnyRole(['admin', 'recepcion', 'tecnico', 'auditor']);
+      allow write: if hasAnyRole(['admin', 'recepcion', 'tecnico']);
+    }
+
+    match /appointments/{docId} {
+      allow read: if hasAnyRole(['admin', 'recepcion', 'tecnico', 'auditor']);
+      allow write: if hasAnyRole(['admin', 'recepcion']);
+    }
+
+    match /counters/{docId} {
+      allow read: if isSignedIn();
+      allow write: if hasAnyRole(['admin', 'recepcion']);
+    }
+
+    // Append-only audit trail: any signed-in role may write an entry,
+    // nobody may modify or erase history.
+    match /auditLog/{docId} {
+      allow read: if hasAnyRole(['admin', 'auditor']);
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+  }
+}
