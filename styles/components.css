@@ -168,8 +168,14 @@ table.table tbody tr[data-clickable] { cursor: pointer; }
 .nav-item__icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; }
 /* The "Más" entry only makes sense on the phone bottom bar — on desktop
    every section is already listed in the sidebar, so showing it there
-   would just be a dead button. See layout.css for the mobile override. */
-.nav-item--more { display: none; }
+   would just be a dead button. Scoped to min-width (rather than an
+   unconditional rule + a mobile override in layout.css) because this
+   file loads *after* layout.css: an unconditional rule here would win
+   the cascade over layout.css's mobile media query regardless of
+   viewport width, hiding the button on phones too. */
+@media (min-width: 721px) {
+  .nav-item--more { display: none; }
+}
 
 /* ---- Modal ----------------------------------------------------------------- */
 .modal-backdrop {
