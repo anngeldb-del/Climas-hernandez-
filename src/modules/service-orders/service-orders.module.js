@@ -133,16 +133,10 @@ async function mountNewOrder() {
         Selecciona primero un cliente, o <button type="button" class="btn btn--sm btn--outline" id="quick-add-vehicle-btn">+ agregar vehículo nuevo</button>
       </div>
 
-      <div class="grid grid--form section">
+      <div class="grid grid--form">
         <div class="field"><label class="field__label">Kilometraje actual</label><input class="input" type="number" id="mileage" /></div>
-        <div class="field"><label class="field__label">Técnico responsable</label><select class="select" id="technician"><option value="">Sin asignar</option></select></div>
-        <div class="field"><label class="field__label">Tiempo estimado</label><input class="input" id="estimatedTime" placeholder="Ej. 2 horas" /></div>
-        <div class="field"><label class="field__label">Fecha de entrega estimada</label><input class="input" type="date" id="estimatedDelivery" /></div>
       </div>
-
-      <div class="field"><label class="field__label">Diagnóstico</label><textarea class="textarea" id="diagnosis"></textarea></div>
-      <div class="field"><label class="field__label">Servicio solicitado</label><textarea class="textarea" id="serviceRequested"></textarea></div>
-      <div class="field"><label class="field__label">Servicio realizado</label><textarea class="textarea" id="serviceDone"></textarea></div>
+      <div class="field"><label class="field__label">Diagnóstico / servicio solicitado</label><textarea class="textarea" id="serviceRequested" placeholder="¿Qué reporta el cliente?"></textarea></div>
 
       <h3>Refacciones</h3>
       <div id="parts-lines"></div>
@@ -151,6 +145,16 @@ async function mountNewOrder() {
         <div class="field"><label class="field__label">Mano de obra</label><input class="input" type="number" min="0" step="0.01" id="laborCost" value="0" /></div>
         <div class="field"><label class="field__label">Total</label><input class="input" id="total-display" disabled /></div>
       </div>
+
+      <details class="collapsible">
+        <summary>Más detalles (opcional)</summary>
+        <div class="collapsible__body grid grid--form">
+          <div class="field"><label class="field__label">Técnico responsable</label><select class="select" id="technician"><option value="">Sin asignar</option></select></div>
+          <div class="field"><label class="field__label">Tiempo estimado</label><input class="input" id="estimatedTime" placeholder="Ej. 2 horas" /></div>
+          <div class="field"><label class="field__label">Fecha de entrega estimada</label><input class="input" type="date" id="estimatedDelivery" /></div>
+          <div class="field"><label class="field__label">Diagnóstico técnico</label><textarea class="textarea" id="diagnosis"></textarea></div>
+        </div>
+      </details>
 
       <div class="flex justify-end gap-2">
         <button type="button" class="btn btn--outline" id="cancel">Cancelar</button>
@@ -256,7 +260,7 @@ async function mountNewOrder() {
         estimatedDelivery: container.querySelector('#estimatedDelivery').value || null,
         diagnosis: container.querySelector('#diagnosis').value,
         serviceRequested: container.querySelector('#serviceRequested').value,
-        serviceDone: container.querySelector('#serviceDone').value,
+        serviceDone: '', // filled in later, once the technician has actually done the work
         partsItems,
         laborCost,
         total: computeTotal(partsItems, laborCost)
