@@ -54,6 +54,7 @@
 
 /* Dashboard stat tile */
 .stat-card {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-4);
@@ -62,9 +63,18 @@
   border-radius: var(--radius-lg);
   padding: var(--space-4) var(--space-5);
   box-shadow: var(--shadow-sm);
+  overflow: hidden;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+/* Accent cap — a rotating set of blue tones (--stat-accent, set inline per
+   card by dashboard.module.js) so cards read as distinct at a glance
+   without leaving the brand's blue palette for unrelated hues. */
+.stat-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: var(--stat-accent, var(--color-brand-fresh));
+}
 .stat-card__icon {
   flex-shrink: 0;
   width: 48px; height: 48px;
@@ -156,6 +166,10 @@ table.table tbody tr[data-clickable] { cursor: pointer; }
 .nav-item:hover { background: var(--color-surface-alt); text-decoration: none; }
 .nav-item.active { background: var(--color-accent-soft); color: var(--color-brand-intense); }
 .nav-item__icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; }
+/* The "Más" entry only makes sense on the phone bottom bar — on desktop
+   every section is already listed in the sidebar, so showing it there
+   would just be a dead button. See layout.css for the mobile override. */
+.nav-item--more { display: none; }
 
 /* ---- Modal ----------------------------------------------------------------- */
 .modal-backdrop {
