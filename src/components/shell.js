@@ -14,6 +14,17 @@ import { navigate } from '../core/router.js';
 import { getTheme, toggleTheme } from '../core/theme.service.js';
 import { canInstall, promptInstall } from '../core/pwa.service.js';
 import { openGlobalSearch } from '../modules/search/search.module.js';
+import { openModal } from './ui/modal.js';
+
+/**
+ * On phone-width screens the sidebar becomes a bottom tab bar. Cramming
+ * all ~13 sections into that bar forces tiny wrapped labels and — worse —
+ * pushes the bar's min-content width past the viewport, which drags the
+ * *entire page* into horizontal overflow (grid tracks size to their
+ * content). Showing only these plus a "Más" sheet keeps the bar's
+ * min-content narrow and the mobile UI minimal.
+ */
+const PRIMARY_MOBILE_KEYS = ['dashboard', 'service-orders', 'clients', 'agenda'];
 
 const NAV_SECTIONS = [
   {
@@ -64,6 +75,10 @@ export function renderShell(root, session) {
         </div>
         <nav class="sidebar__nav">
           ${NAV_SECTIONS.map((section) => renderSection(section)).join('')}
+          <div class="nav-item nav-item--more" data-primary id="nav-more-toggle">
+            <span class="nav-item__icon">${icon('menu')}</span>
+            <span class="nav-item__label">Más</span>
+          </div>
         </nav>
       </aside>
 
@@ -72,7 +87,7 @@ export function renderShell(root, session) {
           ${icon('menu')}
         </button>
         <button class="btn btn--outline topbar__search" id="btn-global-search">
-          ${icon('search', { size: 16 })} <span>Buscar cliente, vehículo, folio, placas…</span>
+          ${icon('search', { size: 16 })} <span class="topbar__search-label">Buscar cliente, vehículo, folio, placas…</span>
         </button>
         <div class="topbar__actions">
           <button class="btn btn--icon btn--ghost hidden" id="btn-install" title="Instalar aplicación">${icon('download')}</button>
@@ -97,6 +112,7 @@ export function renderShell(root, session) {
 
   document.getElementById('btn-global-search').addEventListener('click', openGlobalSearch);
   document.getElementById('btn-logout').addEventListener('click', logout);
+  document.getElementById('nav-more-toggle').addEventListener('click', openMoreSheet);
 
   const installBtn = document.getElementById('btn-install');
   if (canInstall()) installBtn.classList.remove('hidden');
@@ -123,10 +139,29 @@ function renderSection(section) {
   return `
     <div class="sidebar__section-title">${section.title}</div>
     ${visibleItems.map((item) => `
-      <div class="nav-item" data-route="${item.key}">
+      <div class="nav-item" data-route="${item.key}" ${PRIMARY_MOBILE_KEYS.includes(item.key) ? 'data-primary' : ''}>
         <span class="nav-item__icon">${icon(item.icon)}</span>
         <span class="nav-item__label">${item.label}</span>
       </div>
     `).join('')}
   `;
+}
+
+/** Phone-only "more" sheet: everything that doesn't fit in the compact bottom bar. */
+function openMoreSheet() {
+  const rest = NAV_SECTIONS.flatMap((section) => section.items)
+    .filter((item) => hasAccess(item.key) && !PRIMARY_MOBILE_KEYS.includes(item.key));
+
+  const body = document.createElement('div');
+  body.innerHTML = rest.map((item) => `
+    <div class="more-sheet-item" data-route="${item.key}">
+      <span class="nav-item__icon">${icon(item.icon)}</span>
+      <span>${item.label}</span>
+    </div>
+  `).join('');
+
+  const modal = openModal({ title: 'Más opciones', body, maxWidth: '360px' });
+  body.querySelectorAll('.more-sheet-item[data-route]').forEach((el) => {
+    el.addEventListener('click', () => { modal.close(); navigate(el.dataset.route); });
+  });
 }
