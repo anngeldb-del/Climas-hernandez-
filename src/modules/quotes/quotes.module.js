@@ -5,9 +5,9 @@
  * service-orders: #/quotes, #/quotes/new, #/quotes/{id}.
  */
 
-import { subscribeQuotes, getQuote, createQuote, updateQuote, deleteQuote, computeQuoteTotals } from './quotes.service.js';
+import { subscribeQuotes, getQuote, createQuote, updateQuote, deleteQuote, computeQuoteTotals, DEFAULT_ISR_RATE } from './quotes.service.js';
 import { getAll } from '../../core/db.service.js';
-import { COLLECTIONS } from '../../config/constants.js';
+import { COLLECTIONS, BUSINESS } from '../../config/constants.js';
 import { getVehiclesByClient, vehicleLabel } from '../vehicles/vehicles.service.js';
 import { renderTable, sortRows } from '../../components/ui/table.js';
 import { createSearchSelect } from '../../components/ui/search-select.js';
@@ -18,8 +18,8 @@ import { confirmDialog } from '../../components/ui/modal.js';
 import { showToast } from '../../components/ui/toast.js';
 import { icon } from '../../components/ui/icons.js';
 import { navigate } from '../../core/router.js';
-import { formatCurrency, formatDate } from '../../core/utils.js';
-import { generateQuotePdf } from './quote-pdf.js';
+import { formatCurrency, formatDate, downloadBlob } from '../../core/utils.js';
+import { generateQuotePdf, getQuotePdfFile } from './quote-pdf.js';
 
 let unsubscribers = [];
 let container = null;
@@ -29,6 +29,29 @@ function clearUnsubs() { unsubscribers.forEach((fn) => fn()); unsubscribers = []
 let allQuotes = [];
 let sortKey = 'createdAt';
 let sortDir = 'desc';
+
+/** Shared letterhead so every quote screen (form + detail) carries the same branding as the exported PDF. */
+function letterheadHtml() {
+  return `
+    <div class="flex items-center gap-3" style="margin-bottom:var(--space-5)">
+      <img src="${BUSINESS.logo.default}" alt="${BUSINESS.name}" style="height:48px;width:auto" />
+      <div>
+        <strong>${BUSINESS.name}</strong>
+        <div class="text-xs text-muted">${BUSINESS.slogan}</div>
+      </div>
+    </div>
+  `;
+}
+
+/** Single source of the subtotal/IVA/ISR/total lines — used by both the live form preview and the read-only detail view. */
+function totalsLinesHtml({ subtotal, tax, taxEnabled, isr, isrEnabled, isrRate, total }) {
+  return `
+    <p>Subtotal: <strong>${formatCurrency(subtotal)}</strong></p>
+    ${taxEnabled ? `<p>IVA (16%): <strong>${formatCurrency(tax)}</strong></p>` : ''}
+    ${isrEnabled ? `<p>Retención ISR (${isrRate}%): <strong>-${formatCurrency(isr)}</strong></p>` : ''}
+    <p style="font-size:1.25rem">Total: <strong>${formatCurrency(total)}</strong></p>
+  `;
+}
 
 function renderList(rows) {
   const el = container.querySelector('#quotes-table');
@@ -68,6 +91,7 @@ async function mountNewQuote() {
       </div>
     </div>
     <form id="quote-form" class="card">
+      ${letterheadHtml()}
       <div class="grid grid--form">
         <div class="field"><label class="field__label">Cliente *</label><div id="client-picker"></div></div>
         <div class="field"><label class="field__label">Vehículo</label><div id="vehicle-picker"></div></div>
@@ -76,15 +100,20 @@ async function mountNewQuote() {
       <h3>Conceptos</h3>
       <div id="quote-lines"></div>
 
-      <div class="field" style="margin-top:16px">
-        <label class="flex items-center gap-2"><input type="checkbox" id="tax-enabled" /> Incluir IVA (16%)</label>
+      <div class="grid grid--form" style="margin-top:16px">
+        <div class="field">
+          <label class="flex items-center gap-2"><input type="checkbox" id="tax-enabled" /> Incluir IVA (16%)</label>
+        </div>
+        <div class="field">
+          <label class="flex items-center gap-2"><input type="checkbox" id="isr-enabled" /> Aplicar retención de ISR</label>
+        </div>
+        <div class="field" id="isr-rate-field" style="display:none">
+          <label class="field__label">Porcentaje de retención</label>
+          <input class="input" type="number" id="isr-rate" min="0" max="100" step="0.01" value="${DEFAULT_ISR_RATE}" />
+        </div>
       </div>
 
-      <div class="text-right section">
-        <p>Subtotal: <strong id="subtotal-display">$0.00</strong></p>
-        <p>IVA: <strong id="tax-display">$0.00</strong></p>
-        <p style="font-size:1.25rem">Total: <strong id="total-display">$0.00</strong></p>
-      </div>
+      <div class="text-right section" id="totals-preview"></div>
 
       <div class="flex justify-end gap-2">
         <button type="button" class="btn btn--outline" id="cancel">Cancelar</button>
@@ -116,29 +145,45 @@ async function mountNewQuote() {
   });
 
   const taxCheckbox = container.querySelector('#tax-enabled');
-  function refreshTotals() {
-    const { subtotal, tax, total } = computeQuoteTotals(lineItems.getItems(), taxCheckbox.checked);
-    container.querySelector('#subtotal-display').textContent = formatCurrency(subtotal);
-    container.querySelector('#tax-display').textContent = formatCurrency(tax);
-    container.querySelector('#total-display').textContent = formatCurrency(total);
+  const isrCheckbox = container.querySelector('#isr-enabled');
+  const isrRateField = container.querySelector('#isr-rate-field');
+  const isrRateInput = container.querySelector('#isr-rate');
+
+  function currentTotals() {
+    return computeQuoteTotals(lineItems.getItems(), taxCheckbox.checked, isrCheckbox.checked, Number(isrRateInput.value));
   }
+  function refreshTotals() {
+    const totals = currentTotals();
+    container.querySelector('#totals-preview').innerHTML = totalsLinesHtml({
+      ...totals, taxEnabled: taxCheckbox.checked, isrEnabled: isrCheckbox.checked, isrRate: isrRateInput.value
+    });
+  }
+
   const lineItems = createLineItems(container.querySelector('#quote-lines'), { onChange: refreshTotals });
   taxCheckbox.addEventListener('change', refreshTotals);
+  isrCheckbox.addEventListener('change', () => {
+    isrRateField.style.display = isrCheckbox.checked ? '' : 'none';
+    refreshTotals();
+  });
+  isrRateInput.addEventListener('input', refreshTotals);
   refreshTotals();
 
   container.querySelector('#quote-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!selectedClient) { showToast('Selecciona un cliente', 'warning'); return; }
-    const items = lineItems.getItems();
-    const { subtotal, tax, total } = computeQuoteTotals(items, taxCheckbox.checked);
+    const { subtotal, tax, isr, total } = currentTotals();
     try {
       const { id } = await createQuote({
         clientId: selectedClient.id,
         clientName: selectedClient.name,
         clientPhone: selectedClient.phone,
+        clientEmail: selectedClient.email || '',
         vehicleId: selectedVehicle?.id || null,
         vehicleLabel: selectedVehicle ? vehicleLabel(selectedVehicle) : '',
-        items, taxEnabled: taxCheckbox.checked, subtotal, tax, total
+        items: lineItems.getItems(),
+        taxEnabled: taxCheckbox.checked, subtotal, tax,
+        isrEnabled: isrCheckbox.checked, isrRate: Number(isrRateInput.value), isr,
+        total
       });
       showToast('Cotización creada', 'success');
       navigate('quotes', id);
@@ -147,6 +192,35 @@ async function mountNewQuote() {
       showToast('No se pudo crear la cotización', 'danger');
     }
   });
+}
+
+/** Web Share API (attaches the actual PDF, ideal on phones) with a mailto: fallback for browsers that can't share files. */
+async function sendQuoteByEmail(quote) {
+  const file = await getQuotePdfFile(quote);
+
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: `Cotización ${quote.folioLabel}`,
+        text: `Cotización ${quote.folioLabel} de ${BUSINESS.name} para ${quote.clientName} — ${formatCurrency(quote.total)}.`
+      });
+      return;
+    } catch (error) {
+      if (error.name === 'AbortError') return; // user closed the share sheet — not a failure
+    }
+  }
+
+  // Fallback (mailto: can't attach files): download the PDF and open a pre-filled draft to attach it to manually.
+  downloadBlob(file, file.name);
+
+  const subject = encodeURIComponent(`Cotización ${quote.folioLabel} — ${BUSINESS.name}`);
+  const body = encodeURIComponent(
+    `Hola ${quote.clientName || ''},\n\nAdjunto la cotización ${quote.folioLabel} por un total de ${formatCurrency(quote.total)}.\n\n` +
+    `Saludos,\n${BUSINESS.name}`
+  );
+  window.location.href = `mailto:${quote.clientEmail || ''}?subject=${subject}&body=${body}`;
+  showToast('Se descargó el PDF — adjúntalo en el correo que se acaba de abrir', 'info');
 }
 
 async function mountDetail(quoteId) {
@@ -161,6 +235,7 @@ async function mountDetail(quoteId) {
         <div><h1 class="mb-0">${quote.folioLabel}</h1><p class="mb-0 text-sm">${quote.clientName} · ${quote.vehicleLabel || 'Sin vehículo'}</p></div>
       </div>
       <div class="flex gap-2">
+        <button class="btn btn--outline" id="send-email">${icon('mail', { size: 16 })} Enviar por correo</button>
         <button class="btn btn--outline" id="download-pdf">${icon('download', { size: 16 })} Descargar PDF</button>
         <button class="btn btn--danger" id="delete-quote">${icon('trash', { size: 16 })} Eliminar</button>
       </div>
@@ -168,14 +243,13 @@ async function mountDetail(quoteId) {
 
     <div class="grid grid--2">
       <div class="card">
+        ${letterheadHtml()}
         <h3>Conceptos</h3>
         <table class="table">
           <thead><tr><th>Descripción</th><th>Cant.</th><th>P. Unit.</th><th>Importe</th></tr></thead>
           <tbody>${(quote.items || []).map((i) => `<tr><td>${i.description}</td><td>${i.quantity}</td><td>${formatCurrency(i.unitPrice)}</td><td>${formatCurrency(i.quantity * i.unitPrice)}</td></tr>`).join('')}</tbody>
         </table>
-        <p class="text-right">Subtotal: ${formatCurrency(quote.subtotal)}</p>
-        ${quote.taxEnabled ? `<p class="text-right">IVA: ${formatCurrency(quote.tax)}</p>` : ''}
-        <p class="text-right" style="font-size:1.25rem"><strong>Total: ${formatCurrency(quote.total)}</strong></p>
+        <div class="text-right">${totalsLinesHtml(quote)}</div>
       </div>
       <div class="card">
         <h3>Firma de conformidad</h3>
@@ -191,6 +265,14 @@ async function mountDetail(quoteId) {
     const btn = container.querySelector('#download-pdf');
     btn.disabled = true;
     try { await generateQuotePdf(quote); } finally { btn.disabled = false; }
+  });
+  container.querySelector('#send-email').addEventListener('click', async () => {
+    const btn = container.querySelector('#send-email');
+    btn.disabled = true;
+    try { await sendQuoteByEmail(quote); } catch (error) {
+      console.error('[quotes] send by email failed', error);
+      showToast('No se pudo enviar/compartir la cotización', 'danger');
+    } finally { btn.disabled = false; }
   });
   container.querySelector('#delete-quote').addEventListener('click', async () => {
     const confirmed = await confirmDialog({ title: 'Eliminar cotización', message: `¿Eliminar ${quote.folioLabel}?` });

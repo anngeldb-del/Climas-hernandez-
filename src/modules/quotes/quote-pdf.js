@@ -2,11 +2,15 @@
  * quote-pdf.js
  * -----------------------------------------------------------------------
  * Builds a professional, printable PDF for a quote: logo, business data,
- * client/vehicle, itemized concepts, IVA (optional), total, a WhatsApp
- * confirmation QR code, and the client's signature if one was captured.
+ * client/vehicle, itemized concepts, IVA and ISR retention (both
+ * optional), total, a WhatsApp confirmation QR code, and the client's
+ * signature if one was captured.
  *
  * jsPDF and the QR generator are dynamically imported only when a quote
  * is actually exported, so no other screen pays their download cost.
+ * `buildQuotePdfDoc` is the single place the document gets assembled —
+ * downloading and emailing/sharing both reuse it instead of building the
+ * PDF twice.
  */
 
 import { BUSINESS } from '../../config/constants.js';
@@ -37,9 +41,12 @@ async function loadImageAsDataUrl(path) {
 }
 
 /**
- * @param {object} quote  {folioLabel, createdAt, clientName, clientPhone, vehicleLabel, items, taxEnabled, subtotal, tax, total, signatureUrl}
+ * Assembles the jsPDF document for a quote. Does not save/download —
+ * callers decide what to do with the result (save to disk, turn into a
+ * Blob/File for sharing, etc).
+ * @param {object} quote {folioLabel, createdAt, clientName, clientPhone, vehicleLabel, items, taxEnabled, subtotal, tax, isrEnabled, isrRate, isr, total, signatureUrl}
  */
-export async function generateQuotePdf(quote) {
+export async function buildQuotePdfDoc(quote) {
   await ensureLibs();
   const doc = new jsPDFCtor({ unit: 'mm', format: 'letter' });
   const marginX = 15;
@@ -90,7 +97,6 @@ export async function generateQuotePdf(quote) {
   doc.text(quote.vehicleLabel || '—', marginX + 20, y);
 
   y += 10;
-  const tableTop = y;
   doc.setFillColor(238, 241, 244);
   doc.rect(marginX, y, 180, 7, 'F');
   doc.setFont(undefined, 'bold');
@@ -119,6 +125,11 @@ export async function generateQuotePdf(quote) {
     y += 6;
     doc.text('IVA (16%):', 148, y);
     doc.text(formatCurrency(quote.tax), 175, y);
+  }
+  if (quote.isrEnabled) {
+    y += 6;
+    doc.text(`Retención ISR (${quote.isrRate}%):`, 148, y);
+    doc.text(`-${formatCurrency(quote.isr)}`, 175, y);
   }
   y += 7;
   doc.setFontSize(12);
@@ -154,5 +165,18 @@ export async function generateQuotePdf(quote) {
   doc.setTextColor(120);
   doc.text('Esta cotización tiene una vigencia de 15 días naturales a partir de su fecha de emisión.', marginX, 280);
 
+  return doc;
+}
+
+/** Builds the PDF and triggers a browser download. */
+export async function generateQuotePdf(quote) {
+  const doc = await buildQuotePdfDoc(quote);
   doc.save(`${quote.folioLabel}.pdf`);
+}
+
+/** Builds the PDF as a File — used to share/attach it (see quotes.module.js sendQuoteByEmail). */
+export async function getQuotePdfFile(quote) {
+  const doc = await buildQuotePdfDoc(quote);
+  const blob = doc.output('blob');
+  return new File([blob], `${quote.folioLabel}.pdf`, { type: 'application/pdf' });
 }
