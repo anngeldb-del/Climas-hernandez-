@@ -18,7 +18,7 @@ import { confirmDialog } from '../../components/ui/modal.js';
 import { showToast } from '../../components/ui/toast.js';
 import { icon } from '../../components/ui/icons.js';
 import { navigate } from '../../core/router.js';
-import { formatCurrency, formatDate, downloadBlob } from '../../core/utils.js';
+import { formatCurrency, formatDate, downloadBlob, waLink } from '../../core/utils.js';
 import { generateQuotePdf, getQuotePdfFile } from './quote-pdf.js';
 
 let unsubscribers = [];
@@ -109,7 +109,8 @@ async function mountNewQuote() {
         </div>
         <div class="field" id="isr-rate-field" style="display:none">
           <label class="field__label">Porcentaje de retención</label>
-          <input class="input" type="number" id="isr-rate" min="0" max="100" step="0.01" value="${DEFAULT_ISR_RATE}" />
+          <input class="input" type="number" id="isr-rate" min="0" max="100" step="0.25" value="${DEFAULT_ISR_RATE}" />
+          <span class="field__hint">Incrementos de 0.25 — ajusta si tu caso usa otro porcentaje</span>
         </div>
       </div>
 
@@ -223,6 +224,23 @@ async function sendQuoteByEmail(quote) {
   showToast('Se descargó el PDF — adjúntalo en el correo que se acaba de abrir', 'info');
 }
 
+/**
+ * WhatsApp's click-to-chat link (wa.me) can't attach a file — only
+ * Web Share can, and it opens whichever app the user picks, not
+ * WhatsApp specifically. So this downloads the PDF and opens the chat
+ * with the client (pre-filled message) ready for them to attach it,
+ * which is the same approach the PDF's own confirmation QR code uses.
+ */
+async function sendQuoteByWhatsApp(quote) {
+  const file = await getQuotePdfFile(quote);
+  downloadBlob(file, file.name);
+
+  const message = `Hola ${quote.clientName || ''}, te comparto la cotización ${quote.folioLabel} de ${BUSINESS.name} ` +
+    `por un total de ${formatCurrency(quote.total)}. Adjunto el PDF que se acaba de descargar.`;
+  window.open(waLink(quote.clientPhone, message), '_blank');
+  showToast('Se descargó el PDF — adjúntalo en la conversación de WhatsApp que se acaba de abrir', 'info');
+}
+
 async function mountDetail(quoteId) {
   container.innerHTML = '<div class="skeleton" style="height:400px"></div>';
   const quote = await getQuote(quoteId);
@@ -235,6 +253,7 @@ async function mountDetail(quoteId) {
         <div><h1 class="mb-0">${quote.folioLabel}</h1><p class="mb-0 text-sm">${quote.clientName} · ${quote.vehicleLabel || 'Sin vehículo'}</p></div>
       </div>
       <div class="flex gap-2">
+        <button class="btn btn--outline" id="send-whatsapp">${icon('whatsapp', { size: 16 })} Enviar por WhatsApp</button>
         <button class="btn btn--outline" id="send-email">${icon('mail', { size: 16 })} Enviar por correo</button>
         <button class="btn btn--outline" id="download-pdf">${icon('download', { size: 16 })} Descargar PDF</button>
         <button class="btn btn--danger" id="delete-quote">${icon('trash', { size: 16 })} Eliminar</button>
@@ -272,6 +291,14 @@ async function mountDetail(quoteId) {
     try { await sendQuoteByEmail(quote); } catch (error) {
       console.error('[quotes] send by email failed', error);
       showToast('No se pudo enviar/compartir la cotización', 'danger');
+    } finally { btn.disabled = false; }
+  });
+  container.querySelector('#send-whatsapp').addEventListener('click', async () => {
+    const btn = container.querySelector('#send-whatsapp');
+    btn.disabled = true;
+    try { await sendQuoteByWhatsApp(quote); } catch (error) {
+      console.error('[quotes] send by WhatsApp failed', error);
+      showToast('No se pudo preparar el envío por WhatsApp', 'danger');
     } finally { btn.disabled = false; }
   });
   container.querySelector('#delete-quote').addEventListener('click', async () => {

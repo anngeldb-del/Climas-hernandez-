@@ -11,10 +11,10 @@ import { nextSequence, formatFolio } from '../../core/counters.service.js';
 
 const FOLIO_PREFIX = 'COT';
 const IVA_RATE = 0.16;
-/** Retención de ISR: unlike IVA (fixed 16%), the rate varies by scenario
- * (10% is the common case for honorarios a personas físicas), so it's an
- * editable per-quote field — this is only the default it starts at. */
-const DEFAULT_ISR_RATE = 10;
+/** Retención de ISR: unlike IVA (fixed 16%), the rate varies by scenario,
+ * so it's an editable per-quote field — this is only the default it
+ * starts at (1.25%, this business's applicable rate). */
+const DEFAULT_ISR_RATE = 1.25;
 
 export function subscribeQuotes(onData) {
   return subscribe(COLLECTIONS.QUOTES, [], onData);
