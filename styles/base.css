@@ -80,6 +80,7 @@ legend { padding: 0; }
 .mb-0 { margin-bottom: 0; }
 
 .hidden { display: none !important; }
+.rotate-180 { display: inline-flex; transform: rotate(180deg); }
 
 .skeleton {
   background: linear-gradient(90deg, var(--color-surface-alt) 25%, var(--color-border) 37%, var(--color-surface-alt) 63%);
