@@ -40,11 +40,11 @@ export function createLineItems(container, { rows = [], onChange } = {}) {
           <tbody>
             ${items.map((row, i) => `
               <tr data-row="${i}">
-                <td><input class="input" data-field="description" value="${row.description || ''}" placeholder="Refacción o concepto" /></td>
-                <td><input class="input" type="number" min="0" step="1" data-field="quantity" value="${row.quantity ?? 1}" /></td>
-                <td><input class="input" type="number" min="0" step="0.01" data-field="unitPrice" value="${row.unitPrice ?? 0}" /></td>
-                <td data-subtotal>${formatCurrency(subtotal(row))}</td>
-                <td><button type="button" class="btn btn--icon btn--ghost" data-remove>${icon('trash', { size: 14 })}</button></td>
+                <td data-label="Descripción"><input class="input" data-field="description" value="${row.description || ''}" placeholder="Refacción o concepto" /></td>
+                <td data-label="Cant."><input class="input" type="number" min="0" step="1" data-field="quantity" value="${row.quantity ?? 1}" /></td>
+                <td data-label="Precio unit."><input class="input" type="number" min="0" step="0.01" data-field="unitPrice" value="${row.unitPrice ?? 0}" /></td>
+                <td data-label="Importe" data-subtotal>${formatCurrency(subtotal(row))}</td>
+                <td data-label=""><button type="button" class="btn btn--icon btn--ghost" data-remove>${icon('trash', { size: 14 })}</button></td>
               </tr>
             `).join('') || `<tr><td colspan="5" class="table-empty">Sin conceptos agregados</td></tr>`}
           </tbody>
