@@ -14,14 +14,13 @@ import { getClient } from '../clients/clients.service.js';
 import { getAll } from '../../core/db.service.js';
 import { where, orderBy } from '../../core/firebase.init.js';
 import { COLLECTIONS, FUEL_TYPES, ORDER_STATUS_META } from '../../config/constants.js';
-import { renderTable, sortRows } from '../../components/ui/table.js';
 import { openModal, confirmDialog } from '../../components/ui/modal.js';
 import { buildForm, readForm, validateForm } from '../../components/ui/form-builder.js';
 import { createPhotoUploader } from '../../components/ui/file-upload.js';
 import { showToast } from '../../components/ui/toast.js';
 import { icon } from '../../components/ui/icons.js';
 import { navigate } from '../../core/router.js';
-import { debounce, normalizeText, formatDate } from '../../core/utils.js';
+import { debounce, normalizeText, formatDate, escapeHtml } from '../../core/utils.js';
 
 let unsubscribers = [];
 let container = null;
@@ -30,8 +29,6 @@ function clearUnsubs() { unsubscribers.forEach((fn) => fn()); unsubscribers = []
 
 let allVehicles = [];
 let searchTerm = '';
-let sortKey = 'brand';
-let sortDir = 'asc';
 
 function vehicleFormFields(vehicle = {}) {
   return [
@@ -64,20 +61,44 @@ function openEditModal(vehicle) {
   });
 }
 
-function renderList(rows) {
+/**
+ * Groups vehicles by owner so a client with several cars shows them all
+ * together under their name, instead of scattered across a flat list
+ * sorted by brand — the whole point of browsing vehicles by client.
+ */
+function renderGrouped(rows) {
   const listEl = container.querySelector('#vehicles-table');
-  renderTable(listEl, {
-    columns: [
-      { key: 'brand', label: 'Marca / Modelo', render: (v) => vehicleLabel(v) },
-      { key: 'plates', label: 'Placas', render: (v) => v.plates || '—' },
-      { key: 'color', label: 'Color', render: (v) => v.color || '—' },
-      { key: 'clientName', label: 'Propietario', render: (v) => v.clientName || '—' }
-    ],
-    rows, sortKey, sortDir,
-    onSort: (key) => { sortDir = sortKey === key && sortDir === 'asc' ? 'desc' : 'asc'; sortKey = key; applyFilterAndRender(); },
-    onRowClick: (row) => navigate('vehicles', row.id),
-    emptyMessage: 'No se encontraron vehículos.'
-  });
+  if (!rows.length) {
+    listEl.innerHTML = '<div class="table-empty">No se encontraron vehículos.</div>';
+    return;
+  }
+
+  const groups = new Map(); // clientId -> { clientName, vehicles: [] }
+  for (const v of rows) {
+    if (!groups.has(v.clientId)) groups.set(v.clientId, { clientName: v.clientName || 'Sin cliente', vehicles: [] });
+    groups.get(v.clientId).vehicles.push(v);
+  }
+  const sortedGroups = [...groups.entries()].sort((a, b) => a[1].clientName.localeCompare(b[1].clientName, 'es'));
+
+  listEl.innerHTML = sortedGroups.map(([clientId, group]) => `
+    <div class="vehicle-group">
+      <div class="vehicle-group__header" data-client="${clientId}">
+        <strong>${escapeHtml(group.clientName)}</strong>
+        <span class="badge badge--primary">${group.vehicles.length} vehículo${group.vehicles.length > 1 ? 's' : ''}</span>
+      </div>
+      <div class="grid grid--cards">
+        ${group.vehicles.map((v) => `
+          <div class="card" data-vehicle="${v.id}" style="cursor:pointer">
+            <div class="flex items-center gap-2">${icon('vehicle')} <strong>${escapeHtml(vehicleLabel(v))}</strong></div>
+            <p class="text-sm mb-0">Placas: ${escapeHtml(v.plates) || '—'} · Color: ${escapeHtml(v.color) || '—'}</p>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  listEl.querySelectorAll('[data-vehicle]').forEach((card) => card.addEventListener('click', () => navigate('vehicles', card.dataset.vehicle)));
+  listEl.querySelectorAll('.vehicle-group__header[data-client]').forEach((header) => header.addEventListener('click', () => navigate('clients', header.dataset.client)));
 }
 
 function applyFilterAndRender() {
@@ -85,7 +106,7 @@ function applyFilterAndRender() {
   const filtered = term
     ? allVehicles.filter((v) => [v.brand, v.model, v.plates, v.vin, v.clientName].some((f) => normalizeText(f).includes(term)))
     : allVehicles;
-  renderList(sortRows(filtered, sortKey, sortDir));
+  renderGrouped(filtered);
 }
 
 async function mountList() {
