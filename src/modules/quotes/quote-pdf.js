@@ -53,7 +53,7 @@ export async function buildQuotePdfDoc(quote) {
   let y = 15;
 
   try {
-    const logoDataUrl = await loadImageAsDataUrl(BUSINESS.logo.default);
+    const logoDataUrl = await loadImageAsDataUrl(BUSINESS.logo.hd);
     doc.addImage(logoDataUrl, 'PNG', marginX, y, 22, 22);
   } catch {
     // Logo fetch can fail offline; the PDF is still useful without it.
