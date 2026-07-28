@@ -14,19 +14,30 @@
 const SDK_VERSION = '10.12.2';
 const CDN = `https://www.gstatic.com/firebasejs/${SDK_VERSION}`;
 
-const { initializeApp } = await import(`${CDN}/firebase-app.js`);
-const {
-  getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut,
-  sendPasswordResetEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential
-} = await import(`${CDN}/firebase-auth.js`);
-const {
-  initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  collection, doc, getDoc, getDocs, addDoc, setDoc, updateDoc, deleteDoc,
-  query, where, orderBy, limit, startAfter, onSnapshot, serverTimestamp,
-  runTransaction, writeBatch, Timestamp, increment
-} = await import(`${CDN}/firebase-firestore.js`);
-const { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } = await import(`${CDN}/firebase-storage.js`);
-const { getFunctions, httpsCallable } = await import(`${CDN}/firebase-functions.js`);
+// All five SDK chunks are fetched concurrently — awaiting them one at a
+// time (the original approach) turns a single round trip into a serial
+// waterfall of five, which is brutal on a slow or high-latency connection.
+const [
+  { initializeApp },
+  {
+    getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut,
+    sendPasswordResetEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential
+  },
+  {
+    initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+    collection, doc, getDoc, getDocs, addDoc, setDoc, updateDoc, deleteDoc,
+    query, where, orderBy, limit, startAfter, onSnapshot, serverTimestamp,
+    runTransaction, writeBatch, Timestamp, increment
+  },
+  { getStorage, ref, uploadBytes, getDownloadURL, deleteObject },
+  { getFunctions, httpsCallable }
+] = await Promise.all([
+  import(`${CDN}/firebase-app.js`),
+  import(`${CDN}/firebase-auth.js`),
+  import(`${CDN}/firebase-firestore.js`),
+  import(`${CDN}/firebase-storage.js`),
+  import(`${CDN}/firebase-functions.js`)
+]);
 
 import { firebaseConfig, DEBUG } from '../config/firebase.config.js';
 
