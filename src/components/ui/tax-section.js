@@ -32,8 +32,8 @@ export function createTaxSection(container, { getItems, getLaborCost = () => 0, 
   } = defaults;
 
   container.innerHTML = `
-    <details class="collapsible" ${ivaEnabled || isrEnabled || discountEnabled ? 'open' : ''}>
-      <summary>Impuestos y descuento (opcional)</summary>
+    <details class="collapsible" open>
+      <summary>IVA, ISR y descuento</summary>
       <div class="collapsible__body">
         <div class="grid grid--form">
           <div class="field">
