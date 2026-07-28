@@ -73,6 +73,7 @@ export function renderLoginScreen(root) {
         </button>
 
         <p class="text-xs text-muted" style="margin-top:24px">${business.addressFull} · ${business.phone}</p>
+        <p class="text-xs text-muted" style="margin-top:4px;opacity:0.6">Desarrollado por Ing. Luis Ángel Díaz Bernal</p>
       </form>
     </div>
   `;
