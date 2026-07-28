@@ -18,13 +18,14 @@
  *     clients pick up fresh assets instead of serving stale ones forever.
  */
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const SHELL_CACHE = `autoclimas-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `autoclimas-runtime-${CACHE_VERSION}`;
 
 const APP_SHELL = [
   './',
   './index.html',
+  './offline.html',
   './manifest.webmanifest',
   './styles/tokens.css',
   './styles/base.css',
@@ -82,7 +83,14 @@ async function staleWhileRevalidate(request) {
       if (response && response.ok) cache.put(request, response.clone());
       return response;
     })
-    .catch(() => cached); // offline: fall back to whatever we have cached
+    .catch(async () => {
+      if (cached) return cached;
+      // Nothing cached and the network is down — for a page navigation this
+      // is the difference between a browser error screen and something the
+      // user can act on, so fall back to the offline shell.
+      if (request.mode === 'navigate') return (await caches.open(SHELL_CACHE)).match('./offline.html');
+      return Response.error();
+    });
 
   return cached || networkFetch;
 }

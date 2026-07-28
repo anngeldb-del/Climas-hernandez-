@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sin conexión — Hernández Autoclimas</title>
+  <style>
+    body {
+      margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: #f4f6f8; color: #10161c; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      text-align: center; padding: 24px;
+    }
+    @media (prefers-color-scheme: dark) { body { background: #0b1220; color: #e8edf1; } }
+    .card { max-width: 380px; }
+    h1 { font-size: 1.3rem; margin: 16px 0 8px; }
+    p { color: #57626f; margin: 0 0 20px; }
+    button {
+      background: #2c8fd6; color: #fff; border: none; border-radius: 10px;
+      padding: 10px 20px; font-size: 0.95rem; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Sin conexión</h1>
+    <p>No se pudo cargar esta sección porque no está guardada para uso sin internet. Conéctate de nuevo e inténtalo otra vez.</p>
+    <button onclick="location.reload()">Reintentar</button>
+  </div>
+</body>
+</html>
