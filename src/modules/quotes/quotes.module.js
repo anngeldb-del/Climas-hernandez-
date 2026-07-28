@@ -19,15 +19,14 @@ import { confirmDialog } from '../../components/ui/modal.js';
 import { showToast } from '../../components/ui/toast.js';
 import { icon } from '../../components/ui/icons.js';
 import { navigate } from '../../core/router.js';
-import { formatCurrency, formatDate, downloadBlob, waLink } from '../../core/utils.js';
+import { formatCurrency, formatDate, downloadBlob, waLink, createUnsubTracker, escapeHtml } from '../../core/utils.js';
 import { generateQuotePdf, getQuotePdfFile } from './quote-pdf.js';
 import { getCachedSettings, getEffectiveBusiness } from '../../core/settings.service.js';
 import { calcularTotales } from '../../core/tax.service.js';
 
-let unsubscribers = [];
+const unsubTracker = createUnsubTracker();
 let container = null;
-function trackUnsub(fn) { unsubscribers.push(fn); return fn; }
-function clearUnsubs() { unsubscribers.forEach((fn) => fn()); unsubscribers = []; }
+let signaturePads = [];
 
 let allQuotes = [];
 let sortKey = 'createdAt';
@@ -52,8 +51,8 @@ function totalsLinesHtml(quote) {
   return `
     <p>Subtotal: <strong>${formatCurrency(quote.subtotal)}</strong></p>
     ${quote.discount > 0 ? `<p>Descuento: <strong>-${formatCurrency(quote.discount)}</strong></p>` : ''}
-    ${quote.taxEnabled ? `<p>IVA (${quote.taxRate}%): <strong>${formatCurrency(quote.tax)}</strong></p>` : ''}
-    ${quote.isrEnabled ? `<p>Retención ISR (${quote.isrRate}%): <strong>-${formatCurrency(quote.isr)}</strong></p>` : ''}
+    ${quote.taxEnabled ? `<p>IVA (${quote.taxRate ?? 0}%): <strong>${formatCurrency(quote.tax)}</strong></p>` : ''}
+    ${quote.isrEnabled ? `<p>Retención ISR (${quote.isrRate ?? 0}%): <strong>-${formatCurrency(quote.isr)}</strong></p>` : ''}
     <p style="font-size:1.25rem">Total: <strong>${formatCurrency(quote.total)}</strong></p>
   `;
 }
@@ -84,7 +83,7 @@ function mountList() {
     <div class="card"><div id="quotes-table"><div class="skeleton" style="height:280px"></div></div></div>
   `;
   container.querySelector('#new-quote').addEventListener('click', () => navigate('quotes', 'new'));
-  trackUnsub(subscribeQuotes((rows) => { allQuotes = rows; renderList(sortRows(rows, sortKey, sortDir)); }));
+  unsubTracker.track(subscribeQuotes((rows) => { allQuotes = rows; renderList(sortRows(rows, sortKey, sortDir)); }));
 }
 
 async function mountNewQuote() {
@@ -232,7 +231,7 @@ async function mountDetail(quoteId) {
     <div class="page-header">
       <div class="flex items-center gap-3">
         <button class="btn btn--icon btn--ghost" id="back">${icon('chevronRight', { className: 'rotate-180' })}</button>
-        <div><h1 class="mb-0">${quote.folioLabel}</h1><p class="mb-0 text-sm">${quote.clientName} · ${quote.vehicleLabel || 'Sin vehículo'}</p></div>
+        <div><h1 class="mb-0">${escapeHtml(quote.folioLabel)}</h1><p class="mb-0 text-sm">${escapeHtml(quote.clientName || '')} · ${escapeHtml(quote.vehicleLabel || 'Sin vehículo')}</p></div>
       </div>
       <div class="flex gap-2">
         <button class="btn btn--outline" id="send-whatsapp">${icon('whatsapp', { size: 16 })} Enviar por WhatsApp</button>
@@ -248,7 +247,7 @@ async function mountDetail(quoteId) {
         <h3>Conceptos</h3>
         <table class="table">
           <thead><tr><th>Descripción</th><th>Cant.</th><th>P. Unit.</th><th>Importe</th></tr></thead>
-          <tbody>${(quote.items || []).map((i) => `<tr><td data-label="Descripción">${i.description}</td><td data-label="Cant.">${i.quantity}</td><td data-label="P. Unit.">${formatCurrency(i.unitPrice)}</td><td data-label="Importe">${formatCurrency(i.quantity * i.unitPrice)}</td></tr>`).join('')}</tbody>
+          <tbody>${(quote.items || []).map((i) => `<tr><td data-label="Descripción">${escapeHtml(i.description || '')}</td><td data-label="Cant.">${Number(i.quantity) || 0}</td><td data-label="P. Unit.">${formatCurrency(i.unitPrice)}</td><td data-label="Importe">${formatCurrency((Number(i.quantity) || 0) * (Number(i.unitPrice) || 0))}</td></tr>`).join('')}</tbody>
         </table>
         <div class="text-right">${totalsLinesHtml(quote)}</div>
       </div>
@@ -293,6 +292,7 @@ async function mountDetail(quoteId) {
 
   if (!quote.signatureUrl) {
     const pad = createSignaturePad(container.querySelector('#sig-pad'));
+    signaturePads.push(pad);
     container.querySelector('#sig-clear').addEventListener('click', () => pad.clear());
     container.querySelector('#sig-save').addEventListener('click', async () => {
       if (pad.isEmpty()) { showToast('Captura la firma primero', 'warning'); return; }
@@ -307,13 +307,18 @@ async function mountDetail(quoteId) {
 
 async function mount(root, ctx) {
   container = root;
-  clearUnsubs();
+  unsubTracker.clear();
   const param = ctx.params?.[0];
   if (param === 'new') await mountNewQuote();
   else if (param) await mountDetail(param);
   else mountList();
 }
 
-function unmount() { clearUnsubs(); container = null; }
+function unmount() {
+  unsubTracker.clear();
+  signaturePads.forEach((pad) => pad.destroy());
+  signaturePads = [];
+  container = null;
+}
 
 export default { mount, unmount };

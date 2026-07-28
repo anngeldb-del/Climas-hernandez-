@@ -7,6 +7,7 @@
  */
 
 import { icon } from './icons.js';
+import { escapeHtml } from '../../core/utils.js';
 
 /**
  * @param {{title: string, body: HTMLElement|string, footer?: HTMLElement|string, maxWidth?: string, onClose?: Function}} options
@@ -23,7 +24,7 @@ export function openModal({ title, body, footer, maxWidth = '560px', onClose }) 
 
   const header = document.createElement('div');
   header.className = 'modal__header';
-  header.innerHTML = `<h3>${title}</h3>`;
+  header.innerHTML = `<h3>${escapeHtml(title)}</h3>`;
   const closeBtn = document.createElement('button');
   closeBtn.className = 'btn btn--icon btn--ghost';
   closeBtn.setAttribute('aria-label', 'Cerrar');
@@ -48,20 +49,44 @@ export function openModal({ title, body, footer, maxWidth = '560px', onClose }) 
   document.body.appendChild(backdrop);
   document.body.style.overflow = 'hidden';
 
+  const previouslyFocused = document.activeElement;
+
+  function focusableEls() {
+    return Array.from(modal.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    ));
+  }
+
   function close() {
     backdrop.remove();
     document.body.style.overflow = '';
     document.removeEventListener('keydown', onKeydown);
+    if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
     onClose?.();
   }
 
   function onKeydown(event) {
-    if (event.key === 'Escape') close();
+    if (event.key === 'Escape') { close(); return; }
+    if (event.key !== 'Tab') return;
+    const focusable = focusableEls();
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   closeBtn.addEventListener('click', close);
   backdrop.addEventListener('click', (event) => { if (event.target === backdrop) close(); });
   document.addEventListener('keydown', onKeydown);
+
+  const initialFocus = focusableEls()[0];
+  initialFocus?.focus();
 
   return { close, modalEl: modal, bodyEl };
 }
@@ -81,7 +106,7 @@ export function confirmDialog({ title = 'Confirmar', message, confirmLabel = 'Co
 
     const controller = openModal({
       title,
-      body: `<p>${message}</p>`,
+      body: `<p>${escapeHtml(message)}</p>`,
       footer,
       maxWidth: '420px',
       onClose: () => resolve(false)

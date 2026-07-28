@@ -15,6 +15,7 @@ import { buildForm, readForm, validateForm } from '../../components/ui/form-buil
 import { showToast } from '../../components/ui/toast.js';
 import { icon } from '../../components/ui/icons.js';
 import { navigate } from '../../core/router.js';
+import { escapeHtml } from '../../core/utils.js';
 
 let unsubscribe = null;
 let container = null;
@@ -58,7 +59,7 @@ function renderCalendar() {
     cells.push(`
       <div class="calendar-cell ${iso === today ? 'calendar-cell--today' : ''}" data-date="${iso}">
         <div class="calendar-cell__num">${day}</div>
-        ${dayEvents.slice(0, 3).map((e) => `<div class="badge badge--${TYPE_COLOR[e.type] || 'neutral'}" style="display:block;margin-bottom:2px;white-space:normal;text-align:left">${e.title}</div>`).join('')}
+        ${dayEvents.slice(0, 3).map((e) => `<div class="badge badge--${TYPE_COLOR[e.type] || 'neutral'}" style="display:block;margin-bottom:2px;white-space:normal;text-align:left">${escapeHtml(e.title || '')}</div>`).join('')}
         ${dayEvents.length > 3 ? `<div class="text-xs text-muted">+${dayEvents.length - 3} más</div>` : ''}
       </div>
     `);
@@ -87,7 +88,7 @@ function openDayModal(isoDate) {
       <div class="flex items-center justify-between" style="padding:8px 0;border-bottom:1px solid var(--color-border)">
         <div>
           <span class="badge badge--${TYPE_COLOR[e.type] || 'neutral'}">${APPOINTMENT_TYPES.find((t) => t.value === e.type)?.label || e.type}</span>
-          <div class="text-sm" style="margin-top:4px">${e.title}${e.time ? ` · ${e.time}` : ''}</div>
+          <div class="text-sm" style="margin-top:4px">${escapeHtml(e.title || '')}${e.time ? ` · ${escapeHtml(e.time)}` : ''}</div>
         </div>
         ${e.readOnly
           ? `<button class="btn btn--sm btn--ghost" data-goto="${e.orderId}">Ver orden</button>`

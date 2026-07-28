@@ -13,12 +13,16 @@
  */
 
 import { icon } from './icons.js';
-import { formatCurrency } from '../../core/utils.js';
+import { formatCurrency, escapeHtml } from '../../core/utils.js';
+
+function positive(n) {
+  return Math.max(0, Number(n) || 0);
+}
 
 export function createLineItems(container, { rows = [], onChange } = {}) {
   let items = rows.length ? rows.map((r) => ({ ...r })) : [];
 
-  const subtotal = (row) => (Number(row.quantity) || 0) * (Number(row.unitPrice) || 0);
+  const subtotal = (row) => positive(row.quantity) * positive(row.unitPrice);
   const total = () => items.reduce((sum, row) => sum + subtotal(row), 0);
 
   function updateTotals() {
@@ -40,7 +44,7 @@ export function createLineItems(container, { rows = [], onChange } = {}) {
           <tbody>
             ${items.map((row, i) => `
               <tr data-row="${i}">
-                <td data-label="Descripción"><input class="input" data-field="description" value="${row.description || ''}" placeholder="Refacción o concepto" /></td>
+                <td data-label="Descripción"><input class="input" data-field="description" value="${escapeHtml(row.description || '')}" placeholder="Refacción o concepto" /></td>
                 <td data-label="Cant."><input class="input" type="number" min="0" step="1" data-field="quantity" value="${row.quantity ?? 1}" /></td>
                 <td data-label="Precio unit."><input class="input" type="number" min="0" step="0.01" data-field="unitPrice" value="${row.unitPrice ?? 0}" /></td>
                 <td data-label="Importe" data-subtotal>${formatCurrency(subtotal(row))}</td>
@@ -61,7 +65,7 @@ export function createLineItems(container, { rows = [], onChange } = {}) {
       tr.querySelectorAll('input[data-field]').forEach((input) => {
         input.addEventListener('input', () => {
           const field = input.dataset.field;
-          items[index][field] = field === 'description' ? input.value : Number(input.value);
+          items[index][field] = field === 'description' ? input.value : positive(input.value);
           updateTotals();
           onChange?.(items, total());
         });

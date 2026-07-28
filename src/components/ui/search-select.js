@@ -22,7 +22,7 @@ import { normalizeText, escapeHtml } from '../../core/utils.js';
 export function createSearchSelect(container, { placeholder = 'Buscar…', getOptions, onSelect, initialLabel = '' }) {
   container.innerHTML = `
     <div style="position:relative">
-      <input class="input" type="text" value="${escapeHtml(initialLabel)}" placeholder="${escapeHtml(placeholder)}" autocomplete="off" />
+      <input class="input" type="text" value="${escapeHtml(initialLabel)}" placeholder="${escapeHtml(placeholder)}" aria-label="${escapeHtml(placeholder)}" autocomplete="off" />
       <div class="card search-select__panel hidden" style="position:absolute;z-index:20;width:100%;margin-top:4px;padding:6px;max-height:260px;overflow-y:auto"></div>
     </div>
   `;

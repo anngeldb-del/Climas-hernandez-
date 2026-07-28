@@ -14,12 +14,10 @@ import { createPhotoUploader } from '../../components/ui/file-upload.js';
 import { showToast } from '../../components/ui/toast.js';
 import { icon } from '../../components/ui/icons.js';
 import { navigate } from '../../core/router.js';
-import { formatDate } from '../../core/utils.js';
+import { formatDate, createUnsubTracker, escapeHtml } from '../../core/utils.js';
 
-let unsubscribers = [];
+const unsubTracker = createUnsubTracker();
 let container = null;
-function trackUnsub(fn) { unsubscribers.push(fn); return fn; }
-function clearUnsubs() { unsubscribers.forEach((fn) => fn()); unsubscribers = []; }
 
 let allWarranties = [];
 let sortKey = 'expiresAt';
@@ -80,7 +78,7 @@ function mountList() {
     <div class="card"><div id="warranties-table"><div class="skeleton" style="height:280px"></div></div></div>
   `;
   container.querySelector('#new-warranty').addEventListener('click', () => openWarrantyModal());
-  trackUnsub(subscribeWarranties((rows) => { allWarranties = rows; renderList(sortRows(rows, sortKey, sortDir)); }));
+  unsubTracker.track(subscribeWarranties((rows) => { allWarranties = rows; renderList(sortRows(rows, sortKey, sortDir)); }));
 }
 
 async function mountDetail(warrantyId) {
@@ -92,7 +90,7 @@ async function mountDetail(warrantyId) {
     <div class="page-header">
       <div class="flex items-center gap-3">
         <button class="btn btn--icon btn--ghost" id="back">${icon('chevronRight', { className: 'rotate-180' })}</button>
-        <h1 class="mb-0">Garantía — ${warranty.clientName}</h1>
+        <h1 class="mb-0">Garantía — ${escapeHtml(warranty.clientName || '')}</h1>
       </div>
       <div class="flex gap-2">
         <button class="btn btn--outline" id="edit-warranty">${icon('edit', { size: 16 })} Editar</button>
@@ -101,12 +99,12 @@ async function mountDetail(warrantyId) {
     </div>
     <div class="grid grid--2">
       <div class="card">
-        <p class="text-sm"><strong>Vehículo:</strong> ${warranty.vehicleLabel || '—'}</p>
-        <p class="text-sm"><strong>Folio relacionado:</strong> ${warranty.orderFolio || '—'}</p>
-        <p class="text-sm"><strong>Tipo:</strong> ${warranty.type}</p>
+        <p class="text-sm"><strong>Vehículo:</strong> ${escapeHtml(warranty.vehicleLabel || '—')}</p>
+        <p class="text-sm"><strong>Folio relacionado:</strong> ${escapeHtml(warranty.orderFolio || '—')}</p>
+        <p class="text-sm"><strong>Tipo:</strong> ${escapeHtml(warranty.type || '')}</p>
         <p class="text-sm"><strong>Vigente desde:</strong> ${formatDate(warranty.startDate)}</p>
         <p class="text-sm"><strong>Vigente hasta:</strong> ${formatDate(warranty.expiresAt)} ${isExpired(warranty) ? '<span class="badge badge--danger">Vencida</span>' : '<span class="badge badge--success">Vigente</span>'}</p>
-        ${warranty.notes ? `<p class="text-sm"><strong>Observaciones:</strong> ${warranty.notes}</p>` : ''}
+        ${warranty.notes ? `<p class="text-sm"><strong>Observaciones:</strong> ${escapeHtml(warranty.notes)}</p>` : ''}
       </div>
       <div class="card" id="evidence-section"></div>
     </div>
@@ -132,12 +130,12 @@ async function mountDetail(warrantyId) {
 
 async function mount(root, ctx) {
   container = root;
-  clearUnsubs();
+  unsubTracker.clear();
   const warrantyId = ctx.params?.[0];
   if (warrantyId) await mountDetail(warrantyId);
   else mountList();
 }
 
-function unmount() { clearUnsubs(); container = null; }
+function unmount() { unsubTracker.clear(); container = null; }
 
 export default { mount, unmount };

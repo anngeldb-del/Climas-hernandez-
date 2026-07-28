@@ -18,7 +18,7 @@ import { buildForm, readForm, validateForm } from '../../components/ui/form-buil
 import { showToast } from '../../components/ui/toast.js';
 import { icon } from '../../components/ui/icons.js';
 import { navigate } from '../../core/router.js';
-import { debounce, normalizeText, waLink, formatDate, escapeHtml } from '../../core/utils.js';
+import { debounce, normalizeText, waLink, formatDate, escapeHtml, createUnsubTracker } from '../../core/utils.js';
 
 /** clientId -> vehicle[], kept live so the list shows every vehicle a
  * multi-car client owns without opening their detail page. */
@@ -32,11 +32,8 @@ function groupVehiclesByClient(vehicles) {
   return map;
 }
 
-let unsubscribers = [];
+const unsubTracker = createUnsubTracker();
 let container = null;
-
-function trackUnsub(fn) { unsubscribers.push(fn); return fn; }
-function clearUnsubs() { unsubscribers.forEach((fn) => fn()); unsubscribers = []; }
 
 // ---------------------------------------------------------------------
 // List view
@@ -144,8 +141,8 @@ function mountList() {
     applyFilterAndRender();
   }, 200));
 
-  trackUnsub(subscribeClients((rows) => { allClients = rows; applyFilterAndRender(); }));
-  trackUnsub(subscribeAllVehicles((vehicles) => { vehiclesByClient = groupVehiclesByClient(vehicles); applyFilterAndRender(); }));
+  unsubTracker.track(subscribeClients((rows) => { allClients = rows; applyFilterAndRender(); }));
+  unsubTracker.track(subscribeAllVehicles((vehicles) => { vehiclesByClient = groupVehiclesByClient(vehicles); applyFilterAndRender(); }));
 }
 
 // ---------------------------------------------------------------------
@@ -198,7 +195,7 @@ function renderVehiclesTab(clientId) {
   `;
   el.querySelector('#add-vehicle').addEventListener('click', () => openAddVehicleModal(clientId));
 
-  trackUnsub(subscribeVehiclesByClient(clientId, (vehicles) => {
+  unsubTracker.track(subscribeVehiclesByClient(clientId, (vehicles) => {
     const grid = el.querySelector('#vehicles-grid');
     if (!vehicles.length) {
       grid.innerHTML = '<div class="empty-state">Este cliente aún no tiene vehículos registrados.</div>';
@@ -206,8 +203,8 @@ function renderVehiclesTab(clientId) {
     }
     grid.innerHTML = vehicles.map((v) => `
       <div class="card" data-clickable data-id="${v.id}" style="cursor:pointer">
-        <div class="flex items-center gap-2">${icon('vehicle')} <strong>${vehicleLabel(v)}</strong></div>
-        <p class="text-sm">Placas: ${v.plates || '—'} · Color: ${v.color || '—'}</p>
+        <div class="flex items-center gap-2">${icon('vehicle')} <strong>${escapeHtml(vehicleLabel(v))}</strong></div>
+        <p class="text-sm">Placas: ${escapeHtml(v.plates || '—')} · Color: ${escapeHtml(v.color || '—')}</p>
       </div>
     `).join('');
     grid.querySelectorAll('[data-clickable]').forEach((card) => {
@@ -229,7 +226,7 @@ async function renderHistoryTab(clientId) {
       const meta = ORDER_STATUS_META[o.status] || { label: o.status, color: 'neutral' };
       return `
       <div class="flex items-center justify-between" data-id="${o.id}" data-clickable style="padding:10px 0;border-bottom:1px solid var(--color-border);cursor:pointer">
-        <div><strong>${o.folioLabel || o.id}</strong><div class="text-sm text-muted">${o.vehicleLabel || ''} · ${formatDate(o.createdAt)}</div></div>
+        <div><strong>${escapeHtml(o.folioLabel || o.id)}</strong><div class="text-sm text-muted">${escapeHtml(o.vehicleLabel || '')} · ${formatDate(o.createdAt)}</div></div>
         <span class="badge badge--${meta.color}">${meta.label}</span>
       </div>`;
     }).join('');
@@ -260,8 +257,8 @@ async function mountDetail(clientId) {
       <div class="flex items-center gap-3">
         <button class="btn btn--icon btn--ghost" id="back">${icon('chevronRight', { className: 'rotate-180' })}</button>
         <div>
-          <h1 class="mb-0">${client.name}</h1>
-          <p class="mb-0 text-sm">${client.phone || ''} ${client.email ? '· ' + client.email : ''}</p>
+          <h1 class="mb-0">${escapeHtml(client.name)}</h1>
+          <p class="mb-0 text-sm">${escapeHtml(client.phone || '')} ${client.email ? '· ' + escapeHtml(client.email) : ''}</p>
         </div>
       </div>
       <div class="flex gap-2">
@@ -270,7 +267,7 @@ async function mountDetail(clientId) {
       </div>
     </div>
 
-    ${client.notes ? `<div class="card section"><strong>Observaciones:</strong> ${client.notes}</div>` : ''}
+    ${client.notes ? `<div class="card section"><strong>Observaciones:</strong> ${escapeHtml(client.notes)}</div>` : ''}
 
     <div class="tabs">
       <div class="tab active" data-tab="vehicles">Vehículos</div>
@@ -303,14 +300,14 @@ async function mountDetail(clientId) {
 
 async function mount(root, ctx) {
   container = root;
-  clearUnsubs();
+  unsubTracker.clear();
   const clientId = ctx.params?.[0];
   if (clientId) await mountDetail(clientId);
   else mountList();
 }
 
 function unmount() {
-  clearUnsubs();
+  unsubTracker.clear();
   container = null;
 }
 

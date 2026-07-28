@@ -20,12 +20,10 @@ import { createPhotoUploader } from '../../components/ui/file-upload.js';
 import { showToast } from '../../components/ui/toast.js';
 import { icon } from '../../components/ui/icons.js';
 import { navigate } from '../../core/router.js';
-import { debounce, normalizeText, formatDate, escapeHtml } from '../../core/utils.js';
+import { debounce, normalizeText, formatDate, escapeHtml, createUnsubTracker } from '../../core/utils.js';
 
-let unsubscribers = [];
+const unsubTracker = createUnsubTracker();
 let container = null;
-function trackUnsub(fn) { unsubscribers.push(fn); return fn; }
-function clearUnsubs() { unsubscribers.forEach((fn) => fn()); unsubscribers = []; }
 
 let allVehicles = [];
 let searchTerm = '';
@@ -124,7 +122,7 @@ async function mountList() {
     applyFilterAndRender();
   }, 200));
 
-  trackUnsub(subscribeAllVehicles(async (rows) => {
+  unsubTracker.track(subscribeAllVehicles(async (rows) => {
     // Denormalize the owner's name for display/search without a per-row read on every render.
     const clientCache = new Map();
     for (const v of rows) {
@@ -147,7 +145,7 @@ async function renderHistory(vehicleId) {
     const meta = ORDER_STATUS_META[o.status] || { label: o.status, color: 'neutral' };
     return `
     <div class="flex items-center justify-between" data-id="${o.id}" data-clickable style="padding:10px 0;border-bottom:1px solid var(--color-border);cursor:pointer">
-      <div><strong>${o.folioLabel || o.id}</strong><div class="text-sm text-muted">${formatDate(o.createdAt)} · ${o.serviceRequested || ''}</div></div>
+      <div><strong>${escapeHtml(o.folioLabel || o.id)}</strong><div class="text-sm text-muted">${formatDate(o.createdAt)} · ${escapeHtml(o.serviceRequested || '')}</div></div>
       <span class="badge badge--${meta.color}">${meta.label}</span>
     </div>`;
   }).join('');
@@ -165,8 +163,8 @@ async function mountDetail(vehicleId) {
       <div class="flex items-center gap-3">
         <button class="btn btn--icon btn--ghost" id="back">${icon('chevronRight', { className: 'rotate-180' })}</button>
         <div>
-          <h1 class="mb-0">${vehicleLabel(vehicle)}</h1>
-          <p class="mb-0 text-sm">Propietario: <a href="#/clients/${vehicle.clientId}">${client?.name || '—'}</a></p>
+          <h1 class="mb-0">${escapeHtml(vehicleLabel(vehicle))}</h1>
+          <p class="mb-0 text-sm">Propietario: <a href="#/clients/${vehicle.clientId}">${escapeHtml(client?.name || '—')}</a></p>
         </div>
       </div>
       <div class="flex gap-2">
@@ -178,13 +176,13 @@ async function mountDetail(vehicleId) {
     <div class="grid grid--2 section">
       <div class="card">
         <h3>Datos del vehículo</h3>
-        <p class="text-sm"><strong>Motor:</strong> ${vehicle.engine || '—'}</p>
-        <p class="text-sm"><strong>Color:</strong> ${vehicle.color || '—'}</p>
-        <p class="text-sm"><strong>Placas:</strong> ${vehicle.plates || '—'}</p>
-        <p class="text-sm"><strong>VIN:</strong> ${vehicle.vin || '—'}</p>
-        <p class="text-sm"><strong>Kilometraje:</strong> ${vehicle.mileage ? `${vehicle.mileage} km` : '—'}</p>
-        <p class="text-sm"><strong>Combustible:</strong> ${vehicle.fuelType || '—'}</p>
-        ${vehicle.notes ? `<p class="text-sm"><strong>Observaciones:</strong> ${vehicle.notes}</p>` : ''}
+        <p class="text-sm"><strong>Motor:</strong> ${escapeHtml(vehicle.engine || '—')}</p>
+        <p class="text-sm"><strong>Color:</strong> ${escapeHtml(vehicle.color || '—')}</p>
+        <p class="text-sm"><strong>Placas:</strong> ${escapeHtml(vehicle.plates || '—')}</p>
+        <p class="text-sm"><strong>VIN:</strong> ${escapeHtml(vehicle.vin || '—')}</p>
+        <p class="text-sm"><strong>Kilometraje:</strong> ${vehicle.mileage ? `${Number(vehicle.mileage) || 0} km` : '—'}</p>
+        <p class="text-sm"><strong>Combustible:</strong> ${escapeHtml(vehicle.fuelType || '—')}</p>
+        ${vehicle.notes ? `<p class="text-sm"><strong>Observaciones:</strong> ${escapeHtml(vehicle.notes)}</p>` : ''}
       </div>
       <div class="card" id="photo-section"></div>
     </div>
@@ -217,14 +215,14 @@ async function mountDetail(vehicleId) {
 
 async function mount(root, ctx) {
   container = root;
-  clearUnsubs();
+  unsubTracker.clear();
   const vehicleId = ctx.params?.[0];
   if (vehicleId) await mountDetail(vehicleId);
   else await mountList();
 }
 
 function unmount() {
-  clearUnsubs();
+  unsubTracker.clear();
   container = null;
 }
 
