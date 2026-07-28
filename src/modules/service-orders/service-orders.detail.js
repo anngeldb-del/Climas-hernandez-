@@ -9,11 +9,12 @@
  * signature-pad.js.
  */
 
-import { getOrder, updateOrder, setOrderStatus } from './service-orders.service.js';
+import { getOrder, updateOrder, setOrderStatus, deleteOrder } from './service-orders.service.js';
 import { ORDER_STATUS, ORDER_STATUS_META, ORDER_STATUS_FLOW } from '../../config/constants.js';
 import { createPhotoUploader } from '../../components/ui/file-upload.js';
 import { createSignaturePad } from '../../components/ui/signature-pad.js';
 import { canvasToFile, uploadPhoto } from '../../core/storage.service.js';
+import { confirmDialog } from '../../components/ui/modal.js';
 import { showToast } from '../../components/ui/toast.js';
 import { icon } from '../../components/ui/icons.js';
 import { navigate } from '../../core/router.js';
@@ -65,6 +66,7 @@ export async function mountOrderDetail(container, orderId, { onSignaturePad }) {
       </div>
       <div class="flex gap-2">
         <button class="btn btn--outline" id="print-btn">${icon('order', { size: 16 })} Imprimir</button>
+        <button class="btn btn--danger" id="delete-order">${icon('trash', { size: 16 })} Eliminar</button>
       </div>
     </div>
 
@@ -134,6 +136,21 @@ export async function mountOrderDetail(container, orderId, { onSignaturePad }) {
 
   container.querySelector('#back').addEventListener('click', () => navigate('service-orders'));
   container.querySelector('#print-btn').addEventListener('click', () => printOrderTicket(order));
+  container.querySelector('#delete-order').addEventListener('click', async () => {
+    const confirmed = await confirmDialog({
+      title: 'Eliminar orden',
+      message: `¿Eliminar la orden ${order.folioLabel}? Esta acción no se puede deshacer.`
+    });
+    if (!confirmed) return;
+    try {
+      await deleteOrder(order.id);
+      showToast('Orden eliminada', 'success');
+      navigate('service-orders');
+    } catch (error) {
+      console.error('[service-orders] delete failed', error);
+      showToast('No se pudo eliminar la orden. Solo un administrador puede hacerlo.', 'danger');
+    }
+  });
   container.querySelector('#go-payments').addEventListener('click', () => navigate('payments', '', { orderId: order.id }));
 
   renderStepper(container, order, rerender);
