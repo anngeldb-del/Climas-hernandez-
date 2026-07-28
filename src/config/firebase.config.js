@@ -17,12 +17,12 @@
  *      Firestore Database, Storage, Hosting.
  */
 export const firebaseConfig = {
-  apiKey: 'REPLACE_WITH_YOUR_API_KEY',
-  authDomain: 'REPLACE_WITH_YOUR_PROJECT.firebaseapp.com',
-  projectId: 'REPLACE_WITH_YOUR_PROJECT_ID',
-  storageBucket: 'REPLACE_WITH_YOUR_PROJECT.appspot.com',
-  messagingSenderId: 'REPLACE_WITH_YOUR_SENDER_ID',
-  appId: 'REPLACE_WITH_YOUR_APP_ID'
+  apiKey: 'AIzaSyDWtR5aDIOXzQcAk8_HPREuHrLiF0O4ACw',
+  authDomain: 'autoclimas-hernandez.firebaseapp.com',
+  projectId: 'autoclimas-hernandez',
+  storageBucket: 'autoclimas-hernandez.firebasestorage.app',
+  messagingSenderId: '971137874411',
+  appId: '1:971137874411:web:7e8eb83c2c8058e0fb01ae'
 };
 
 /** Toggle verbose console logging across the app (auto-off in production). */
