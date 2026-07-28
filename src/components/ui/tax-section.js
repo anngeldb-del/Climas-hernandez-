@@ -40,14 +40,14 @@ export function createTaxSection(container, { getItems, getLaborCost = () => 0, 
             <label class="flex items-center gap-2"><input type="checkbox" id="tax-enabled" ${ivaEnabled ? 'checked' : ''} /> Incluir IVA</label>
           </div>
           <div class="field" id="tax-rate-field" style="${ivaEnabled ? '' : 'display:none'}">
-            <label class="field__label">Porcentaje de IVA</label>
+            <label class="field__label" for="tax-rate">Porcentaje de IVA</label>
             <input class="input" type="number" id="tax-rate" min="0" max="100" step="0.01" value="${ivaRate}" />
           </div>
           <div class="field">
             <label class="flex items-center gap-2"><input type="checkbox" id="isr-enabled" ${isrEnabled ? 'checked' : ''} /> Aplicar retención de ISR</label>
           </div>
           <div class="field" id="isr-rate-field" style="${isrEnabled ? '' : 'display:none'}">
-            <label class="field__label">Porcentaje de retención</label>
+            <label class="field__label" for="isr-rate">Porcentaje de retención</label>
             <input class="input" type="number" id="isr-rate" min="0" max="100" step="0.25" value="${isrRate}" />
           </div>
         </div>
@@ -56,14 +56,14 @@ export function createTaxSection(container, { getItems, getLaborCost = () => 0, 
             <label class="flex items-center gap-2"><input type="checkbox" id="discount-enabled" ${discountEnabled ? 'checked' : ''} /> Aplicar descuento</label>
           </div>
           <div class="field" id="discount-type-field" style="${discountEnabled ? '' : 'display:none'}">
-            <label class="field__label">Tipo de descuento</label>
+            <label class="field__label" for="discount-type">Tipo de descuento</label>
             <select class="select" id="discount-type">
               <option value="percent" ${discountType === 'percent' ? 'selected' : ''}>Porcentaje (%)</option>
               <option value="fixed" ${discountType === 'fixed' ? 'selected' : ''}>Monto fijo ($)</option>
             </select>
           </div>
           <div class="field" id="discount-value-field" style="${discountEnabled ? '' : 'display:none'}">
-            <label class="field__label">Valor del descuento</label>
+            <label class="field__label" for="discount-value">Valor del descuento</label>
             <input class="input" type="number" id="discount-value" min="0" step="0.01" value="${discountValue}" />
           </div>
         </div>

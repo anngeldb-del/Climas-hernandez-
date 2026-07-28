@@ -130,12 +130,12 @@ export async function buildQuotePdfDoc(quote) {
   }
   if (quote.taxEnabled) {
     y += 6;
-    doc.text(`IVA (${quote.taxRate}%):`, 148, y);
+    doc.text(`IVA (${quote.taxRate ?? 0}%):`, 148, y);
     doc.text(formatCurrency(quote.tax), 175, y);
   }
   if (quote.isrEnabled) {
     y += 6;
-    doc.text(`Retención ISR (${quote.isrRate}%):`, 148, y);
+    doc.text(`Retención ISR (${quote.isrRate ?? 0}%):`, 148, y);
     doc.text(`-${formatCurrency(quote.isr)}`, 175, y);
   }
   y += 7;

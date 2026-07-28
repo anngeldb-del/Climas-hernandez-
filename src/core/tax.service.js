@@ -27,8 +27,13 @@ function round2(n) {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
+/** Floors a value at 0 — quantities/prices/labor can never legitimately be negative. */
+function positive(n) {
+  return Math.max(0, Number(n) || 0);
+}
+
 export function calcularSubtotal(items) {
-  return round2((items || []).reduce((sum, r) => sum + (Number(r.quantity) || 0) * (Number(r.unitPrice) || 0), 0));
+  return round2((items || []).reduce((sum, r) => sum + positive(r.quantity) * positive(r.unitPrice), 0));
 }
 
 /**
@@ -73,12 +78,13 @@ export function calcularTotales({
   isrEnabled = false, isrRate = 0
 }) {
   const itemsSubtotal = calcularSubtotal(items);
-  const subtotal = round2(itemsSubtotal + (Number(laborCost) || 0));
+  const safeLaborCost = positive(laborCost);
+  const subtotal = round2(itemsSubtotal + safeLaborCost);
   const discount = calcularDescuento(subtotal, discountEnabled, discountType, discountValue);
   const taxableBase = round2(subtotal - discount);
   const tax = calcularIVA(taxableBase, taxEnabled, taxRate);
   const isr = calcularISR(taxableBase, isrEnabled, isrRate);
   const total = round2(taxableBase + tax - isr);
 
-  return { subtotal, laborCost: Number(laborCost) || 0, discount, taxableBase, tax, isr, total };
+  return { subtotal, laborCost: safeLaborCost, discount, taxableBase, tax, isr, total };
 }

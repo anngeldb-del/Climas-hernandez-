@@ -35,12 +35,6 @@ export function formatDateTime(value) {
   return date ? dateTimeFormatter.format(date) : '—';
 }
 
-export function daysBetween(a, b = new Date()) {
-  const dateA = toDate(a);
-  if (!dateA) return null;
-  return Math.floor((dateA.getTime() - toDate(b).getTime()) / 86_400_000);
-}
-
 /** Debounces rapid calls (search inputs, resize handlers, etc.). */
 export function debounce(fn, wait = 300) {
   let timer;
@@ -63,18 +57,6 @@ export function escapeHtml(text) {
   return String(text ?? '').replace(/[&<>"']/g, (char) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   })[char]);
-}
-
-/** Builds a `class="a b c"` value from an object/array, skipping falsy keys. */
-export function classNames(...items) {
-  const out = [];
-  for (const item of items) {
-    if (!item) continue;
-    if (typeof item === 'string') out.push(item);
-    else if (Array.isArray(item)) out.push(...item.filter(Boolean));
-    else out.push(...Object.entries(item).filter(([, v]) => v).map(([k]) => k));
-  }
-  return out.join(' ');
 }
 
 export function digitsOnly(value) {
@@ -118,16 +100,6 @@ export async function compressImage(file, maxDimension = 1600, quality = 0.82) {
   return new File([blob], file.name.replace(/\.\w+$/, '.webp'), { type: 'image/webp' });
 }
 
-/** Turns a FormData-like plain object into Firestore-safe data (drops undefined, trims strings). */
-export function sanitizeFormData(data) {
-  const clean = {};
-  for (const [key, value] of Object.entries(data)) {
-    if (value === undefined) continue;
-    clean[key] = typeof value === 'string' ? value.trim() : value;
-  }
-  return clean;
-}
-
 export function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -139,9 +111,28 @@ export function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
+/** Prefixes a leading =, +, -, @ with a tab so Excel/Sheets can't reinterpret an exported cell as a formula. */
+function neutralizeFormula(value) {
+  const text = String(value ?? '');
+  return /^[=+\-@]/.test(text) ? `\t${text}` : text;
+}
+
 export function csvFromRows(rows, headers) {
-  const escape = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  const escape = (value) => `"${neutralizeFormula(value).replace(/"/g, '""')}"`;
   const lines = [headers.map(escape).join(',')];
   for (const row of rows) lines.push(headers.map((h) => escape(row[h])).join(','));
   return lines.join('\r\n');
+}
+
+/**
+ * Tracks Firestore unsubscribe callbacks for a module's mount() and tears
+ * them all down in one call from unmount() — the same array+forEach pair
+ * was independently copy-pasted into 5 modules; this is the single version.
+ */
+export function createUnsubTracker() {
+  const unsubs = [];
+  return {
+    track(unsub) { unsubs.push(unsub); },
+    clear() { unsubs.forEach((fn) => fn()); unsubs.length = 0; }
+  };
 }
