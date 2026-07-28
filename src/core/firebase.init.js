@@ -122,7 +122,15 @@ const store = {
     'aud-1': { entity: 'serviceOrders', entityId: 'ord-1', action: 'create', details: {}, actorUid: 'demo-admin', actorName: 'Admin Demo', actorRole: 'admin', at: daysAgo(1) },
     'aud-2': { entity: 'payments', entityId: 'pay-2', action: 'create', details: {}, actorUid: 'demo-admin', actorName: 'Admin Demo', actorRole: 'admin', at: daysAgo(0) }
   },
-  counters: { serviceOrders: { value: 1042 }, quotes: { value: 88 } }
+  counters: { serviceOrders: { value: 1042 }, quotes: { value: 88 } },
+  settings: {
+    business: {
+      businessName: 'Hernández Autoclimas', slogan: 'Reparación y Mantenimiento de Clima y Calefacción Automotriz',
+      address: 'Av. Victoria No. 1439 Ote., Col. Centro, Torreón, Coah.', phone: '871 415 5315',
+      email: '', rfc: '', website: '', logoUrl: '',
+      ivaRate: 16, ivaEnabledByDefault: false, isrRate: 1.25, isrEnabledByDefault: false
+    }
+  }
 };
 
 let idCounter = 1000;
@@ -237,6 +245,19 @@ async function deleteDoc(ref) {
 }
 
 function onSnapshot(q, onNext, _onError) {
+  // Document-level subscription (q came from doc(), has an _id) — real
+  // Firebase delivers a DocumentSnapshot here, not a QuerySnapshot.
+  if (q._id) {
+    const fire = () => {
+      const data = store[q._name]?.[q._id];
+      onNext({ id: q._id, exists: () => Boolean(data), data: () => ({ ...data }) });
+    };
+    fire();
+    listeners[q._name] = listeners[q._name] || new Set();
+    listeners[q._name].add(fire);
+    return () => listeners[q._name].delete(fire);
+  }
+
   const fire = () => {
     const rows = applyConstraints(collectionRows(q._name), q.constraints || []);
     onNext({ docs: rows.map((r) => ({ id: r.id, data: () => ({ ...r.data }) })) });
