@@ -30,15 +30,14 @@ import { openModal } from '../../components/ui/modal.js';
 import { showToast } from '../../components/ui/toast.js';
 import { icon } from '../../components/ui/icons.js';
 import { navigate } from '../../core/router.js';
-import { debounce, normalizeText, formatDate, formatCurrency } from '../../core/utils.js';
+import { debounce, normalizeText, formatDate, formatCurrency, createUnsubTracker, escapeHtml } from '../../core/utils.js';
 import { printOrderTicket } from './order-ticket.print.js';
 import { getCachedSettings } from '../../core/settings.service.js';
 import { calcularTotales } from '../../core/tax.service.js';
 
-let unsubscribers = [];
+const unsubTracker = createUnsubTracker();
 let container = null;
-function trackUnsub(fn) { unsubscribers.push(fn); return fn; }
-function clearUnsubs() { unsubscribers.forEach((fn) => fn()); unsubscribers = []; }
+let signaturePads = [];
 
 // ---------------------------------------------------------------------
 // List view
@@ -102,7 +101,7 @@ function mountList() {
   container.querySelector('#order-search').addEventListener('input', debounce((e) => { searchTerm = e.target.value; applyFilterAndRender(); }, 200));
   container.querySelector('#status-filter').addEventListener('change', (e) => { statusFilter = e.target.value; applyFilterAndRender(); });
 
-  trackUnsub(subscribeOrders((rows) => { allOrders = rows; applyFilterAndRender(); }));
+  unsubTracker.track(subscribeOrders((rows) => { allOrders = rows; applyFilterAndRender(); }));
 }
 
 // ---------------------------------------------------------------------
@@ -137,15 +136,15 @@ async function mountNewOrder() {
       </div>
 
       <div class="grid grid--form">
-        <div class="field"><label class="field__label">Kilometraje actual</label><input class="input" type="number" id="mileage" /></div>
+        <div class="field"><label class="field__label" for="mileage">Kilometraje actual</label><input class="input" type="number" id="mileage" /></div>
       </div>
-      <div class="field"><label class="field__label">Diagnóstico / servicio solicitado</label><textarea class="textarea" id="serviceRequested" placeholder="¿Qué reporta el cliente?"></textarea></div>
+      <div class="field"><label class="field__label" for="serviceRequested">Diagnóstico / servicio solicitado</label><textarea class="textarea" id="serviceRequested" placeholder="¿Qué reporta el cliente?"></textarea></div>
 
       <h3>Refacciones</h3>
       <div id="parts-lines"></div>
 
       <div class="grid grid--form">
-        <div class="field"><label class="field__label">Mano de obra</label><input class="input" type="number" min="0" step="0.01" id="laborCost" value="0" /></div>
+        <div class="field"><label class="field__label" for="laborCost">Mano de obra</label><input class="input" type="number" min="0" step="0.01" id="laborCost" value="0" /></div>
       </div>
 
       <div id="tax-section"></div>
@@ -153,11 +152,11 @@ async function mountNewOrder() {
       <details class="collapsible">
         <summary>Más detalles (opcional)</summary>
         <div class="collapsible__body grid grid--form">
-          <div class="field"><label class="field__label">Técnico responsable</label><select class="select" id="technician"><option value="">Sin asignar</option></select></div>
-          <div class="field"><label class="field__label">Tiempo estimado</label><input class="input" id="estimatedTime" placeholder="Ej. 2 horas" /></div>
-          <div class="field"><label class="field__label">Fecha de entrega estimada</label><input class="input" type="date" id="estimatedDelivery" /></div>
-          <div class="field"><label class="field__label">Diagnóstico técnico</label><textarea class="textarea" id="diagnosis"></textarea></div>
-          <div class="field"><label class="field__label">Observaciones</label><textarea class="textarea" id="notes" placeholder="Notas adicionales para el ticket impreso"></textarea></div>
+          <div class="field"><label class="field__label" for="technician">Técnico responsable</label><select class="select" id="technician"><option value="">Sin asignar</option></select></div>
+          <div class="field"><label class="field__label" for="estimatedTime">Tiempo estimado</label><input class="input" id="estimatedTime" placeholder="Ej. 2 horas" /></div>
+          <div class="field"><label class="field__label" for="estimatedDelivery">Fecha de entrega estimada</label><input class="input" type="date" id="estimatedDelivery" /></div>
+          <div class="field"><label class="field__label" for="diagnosis">Diagnóstico técnico</label><textarea class="textarea" id="diagnosis"></textarea></div>
+          <div class="field"><label class="field__label" for="notes">Observaciones</label><textarea class="textarea" id="notes" placeholder="Notas adicionales para el ticket impreso"></textarea></div>
         </div>
       </details>
 
@@ -371,8 +370,8 @@ async function mountDetail(orderId) {
       <div class="flex items-center gap-3">
         <button class="btn btn--icon btn--ghost" id="back">${icon('chevronRight', { className: 'rotate-180' })}</button>
         <div>
-          <h1 class="mb-0">${order.folioLabel}</h1>
-          <p class="mb-0 text-sm">${order.clientName} · ${order.vehicleLabel} · <span class="badge badge--${meta.color}">${meta.label}</span></p>
+          <h1 class="mb-0">${escapeHtml(order.folioLabel)}</h1>
+          <p class="mb-0 text-sm">${escapeHtml(order.clientName || '')} · ${escapeHtml(order.vehicleLabel || '')} · <span class="badge badge--${meta.color}">${meta.label}</span></p>
         </div>
       </div>
       <div class="flex gap-2">
@@ -392,29 +391,29 @@ async function mountDetail(orderId) {
       <div class="grid grid--2">
         <div class="card">
           <h3>Detalles</h3>
-          <p class="text-sm"><strong>Kilometraje:</strong> ${order.mileage ?? '—'} km</p>
-          <p class="text-sm"><strong>Técnico:</strong> ${order.technicianName || 'Sin asignar'}</p>
-          <p class="text-sm"><strong>Tiempo estimado:</strong> ${order.estimatedTime || '—'}</p>
+          <p class="text-sm"><strong>Kilometraje:</strong> ${Number.isFinite(Number(order.mileage)) && order.mileage != null ? Number(order.mileage) : '—'} km</p>
+          <p class="text-sm"><strong>Técnico:</strong> ${escapeHtml(order.technicianName || 'Sin asignar')}</p>
+          <p class="text-sm"><strong>Tiempo estimado:</strong> ${escapeHtml(order.estimatedTime || '—')}</p>
           <p class="text-sm"><strong>Entrega estimada:</strong> ${order.estimatedDelivery ? formatDate(order.estimatedDelivery) : '—'}</p>
-          <p class="text-sm"><strong>Diagnóstico:</strong> ${order.diagnosis || '—'}</p>
-          <p class="text-sm"><strong>Servicio solicitado:</strong> ${order.serviceRequested || '—'}</p>
-          <p class="text-sm"><strong>Servicio realizado:</strong> ${order.serviceDone || '—'}</p>
-          <p class="text-sm"><strong>Observaciones:</strong> ${order.notes || '—'}</p>
+          <p class="text-sm"><strong>Diagnóstico:</strong> ${escapeHtml(order.diagnosis || '—')}</p>
+          <p class="text-sm"><strong>Servicio solicitado:</strong> ${escapeHtml(order.serviceRequested || '—')}</p>
+          <p class="text-sm"><strong>Servicio realizado:</strong> ${escapeHtml(order.serviceDone || '—')}</p>
+          <p class="text-sm"><strong>Observaciones:</strong> ${escapeHtml(order.notes || '—')}</p>
         </div>
         <div class="card">
           <h3>Costos</h3>
           <table class="table">
             <thead><tr><th>Concepto</th><th>Cant.</th><th>P. Unit.</th><th>Importe</th></tr></thead>
             <tbody>
-              ${(order.partsItems || []).map((r) => `<tr><td data-label="Concepto">${r.description}</td><td data-label="Cant.">${r.quantity}</td><td data-label="P. Unit.">${formatCurrency(r.unitPrice)}</td><td data-label="Importe">${formatCurrency(r.quantity * r.unitPrice)}</td></tr>`).join('')}
+              ${(order.partsItems || []).map((r) => `<tr><td data-label="Concepto">${escapeHtml(r.description || '')}</td><td data-label="Cant.">${Number(r.quantity) || 0}</td><td data-label="P. Unit.">${formatCurrency(r.unitPrice)}</td><td data-label="Importe">${formatCurrency((Number(r.quantity) || 0) * (Number(r.unitPrice) || 0))}</td></tr>`).join('')}
               <tr><td colspan="3" data-label="" style="text-align:right"><strong>Mano de obra</strong></td><td data-label="Mano de obra">${formatCurrency(order.laborCost)}</td></tr>
             </tbody>
           </table>
           <div class="text-right">
             <p>Subtotal: <strong>${formatCurrency(order.subtotal ?? (order.total || 0))}</strong></p>
             ${order.discount > 0 ? `<p>Descuento: <strong>-${formatCurrency(order.discount)}</strong></p>` : ''}
-            ${order.taxEnabled ? `<p>IVA (${order.taxRate}%): <strong>${formatCurrency(order.tax)}</strong></p>` : ''}
-            ${order.isrEnabled ? `<p>Retención ISR (${order.isrRate}%): <strong>-${formatCurrency(order.isr)}</strong></p>` : ''}
+            ${order.taxEnabled ? `<p>IVA (${order.taxRate ?? 0}%): <strong>${formatCurrency(order.tax)}</strong></p>` : ''}
+            ${order.isrEnabled ? `<p>Retención ISR (${order.isrRate ?? 0}%): <strong>-${formatCurrency(order.isr)}</strong></p>` : ''}
             <p style="font-size:1.25rem"><strong>Total: ${formatCurrency(order.total)}</strong></p>
           </div>
           <p class="text-right text-muted">Pagado: ${formatCurrency(order.amountPaid)} · Saldo: ${formatCurrency(Math.max(0, order.total - (order.amountPaid || 0)))}</p>
@@ -466,6 +465,7 @@ async function mountDetail(orderId) {
 
   if (!order.signatureClientUrl) {
     const pad = createSignaturePad(container.querySelector('#sig-client-pad'));
+    signaturePads.push(pad);
     container.querySelector('#sig-client-clear').addEventListener('click', () => pad.clear());
     container.querySelector('#sig-client-save').addEventListener('click', async () => {
       if (pad.isEmpty()) { showToast('Solicita al cliente que firme primero', 'warning'); return; }
@@ -478,6 +478,7 @@ async function mountDetail(orderId) {
   }
   if (!order.signatureTechnicianUrl) {
     const pad = createSignaturePad(container.querySelector('#sig-tech-pad'));
+    signaturePads.push(pad);
     container.querySelector('#sig-tech-clear').addEventListener('click', () => pad.clear());
     container.querySelector('#sig-tech-save').addEventListener('click', async () => {
       if (pad.isEmpty()) { showToast('Firma del técnico requerida', 'warning'); return; }
@@ -494,7 +495,7 @@ async function mountDetail(orderId) {
 
 async function mount(root, ctx) {
   container = root;
-  clearUnsubs();
+  unsubTracker.clear();
   const param = ctx.params?.[0];
   if (param === 'new') await mountNewOrder();
   else if (param) await mountDetail(param);
@@ -502,7 +503,9 @@ async function mount(root, ctx) {
 }
 
 function unmount() {
-  clearUnsubs();
+  unsubTracker.clear();
+  signaturePads.forEach((pad) => pad.destroy());
+  signaturePads = [];
   container = null;
 }
 

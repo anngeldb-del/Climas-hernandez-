@@ -104,11 +104,11 @@ async function mount(root) {
     <div class="card section">
       <div class="grid grid--form">
         <div class="field">
-          <label class="field__label">Tipo de reporte</label>
+          <label class="field__label" for="report-type">Tipo de reporte</label>
           <select class="select" id="report-type">${REPORT_TYPES.map((t) => `<option value="${t.value}">${t.label}</option>`).join('')}</select>
         </div>
-        <div class="field"><label class="field__label">Desde</label><input class="input" type="date" id="range-start" value="${range.start}" /></div>
-        <div class="field"><label class="field__label">Hasta</label><input class="input" type="date" id="range-end" value="${range.end}" /></div>
+        <div class="field"><label class="field__label" for="range-start">Desde</label><input class="input" type="date" id="range-start" value="${range.start}" /></div>
+        <div class="field"><label class="field__label" for="range-end">Hasta</label><input class="input" type="date" id="range-end" value="${range.end}" /></div>
         <div class="field" style="align-self:end">
           <button class="btn btn--primary btn--full" id="run-report">Generar</button>
         </div>

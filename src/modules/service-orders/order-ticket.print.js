@@ -90,8 +90,8 @@ export function printOrderTicket(order) {
       <div class="totals">
         <p>Subtotal: <strong>${formatCurrency(order.subtotal ?? order.total)}</strong></p>
         ${order.discount > 0 ? `<p>Descuento: <strong>-${formatCurrency(order.discount)}</strong></p>` : ''}
-        ${order.taxEnabled ? `<p>IVA (${order.taxRate}%): <strong>${formatCurrency(order.tax)}</strong></p>` : ''}
-        ${order.isrEnabled ? `<p>Retención ISR (${order.isrRate}%): <strong>-${formatCurrency(order.isr)}</strong></p>` : ''}
+        ${order.taxEnabled ? `<p>IVA (${order.taxRate ?? 0}%): <strong>${formatCurrency(order.tax)}</strong></p>` : ''}
+        ${order.isrEnabled ? `<p>Retención ISR (${order.isrRate ?? 0}%): <strong>-${formatCurrency(order.isr)}</strong></p>` : ''}
       </div>
       <div class="total">TOTAL: ${formatCurrency(order.total)}</div>
 

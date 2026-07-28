@@ -7,7 +7,7 @@
  */
 
 import { subscribeDashboard } from './dashboard.service.js';
-import { formatCurrency, formatDateTime } from '../../core/utils.js';
+import { formatCurrency, formatDateTime, escapeHtml } from '../../core/utils.js';
 import { ORDER_STATUS_META } from '../../config/constants.js';
 import { icon } from '../../components/ui/icons.js';
 import { navigate } from '../../core/router.js';
@@ -59,8 +59,8 @@ function renderActivity(stats) {
     return `
       <div class="activity-row">
         <div>
-          <strong>${order.folioLabel || order.id}</strong>
-          <div class="text-sm text-muted">${order.clientName || ''} · ${order.vehicleLabel || ''}</div>
+          <strong>${escapeHtml(order.folioLabel || order.id)}</strong>
+          <div class="text-sm text-muted">${escapeHtml(order.clientName || '')} · ${escapeHtml(order.vehicleLabel || '')}</div>
         </div>
         <div class="activity-row__meta">
           <span class="badge badge--${meta.color}">${meta.label}</span>
