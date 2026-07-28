@@ -8,13 +8,14 @@
  */
 
 import { icon } from './ui/icons.js';
-import { BUSINESS, ROLE_LABELS } from '../config/constants.js';
+import { ROLE_LABELS } from '../config/constants.js';
 import { hasAccess, logout } from '../core/auth.service.js';
 import { navigate } from '../core/router.js';
 import { getTheme, toggleTheme } from '../core/theme.service.js';
 import { canInstall, promptInstall } from '../core/pwa.service.js';
 import { openGlobalSearch } from '../modules/search/search.module.js';
 import { openModal } from './ui/modal.js';
+import { getEffectiveBusiness } from '../core/settings.service.js';
 
 /**
  * On phone-width screens the sidebar becomes a bottom tab bar. Cramming
@@ -57,7 +58,8 @@ const NAV_SECTIONS = [
     title: 'Sistema',
     items: [
       { key: 'users', label: 'Usuarios', icon: 'users' },
-      { key: 'audit', label: 'Bitácora', icon: 'audit' }
+      { key: 'audit', label: 'Bitácora', icon: 'audit' },
+      { key: 'settings', label: 'Configuración', icon: 'settings' }
     ]
   }
 ];
@@ -65,13 +67,14 @@ const NAV_SECTIONS = [
 export function renderShell(root, session) {
   const initials = (session.displayName || session.email || '?')
     .split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+  const business = getEffectiveBusiness();
 
   root.innerHTML = `
     <div id="app-shell">
       <aside class="sidebar">
         <div class="sidebar__brand">
-          <img src="${BUSINESS.logo.default}" alt="${BUSINESS.name}" />
-          <div class="sidebar__brand-text">${BUSINESS.name}<small>${ROLE_LABELS[session.role] || session.role}</small></div>
+          <img src="${business.logo}" alt="${business.name}" />
+          <div class="sidebar__brand-text">${business.name}<small>${ROLE_LABELS[session.role] || session.role}</small></div>
         </div>
         <nav class="sidebar__nav">
           ${NAV_SECTIONS.map((section) => renderSection(section)).join('')}

@@ -105,12 +105,23 @@ para una mejor experiencia — la seguridad no depende de eso).
 ## Módulos
 
 Panel principal · Clientes · Vehículos · Órdenes de servicio (folio
-consecutivo, estados, fotos antes/después, firmas) · Catálogo de
-servicios · Inventario (alertas de stock mínimo) · Cotizaciones (PDF con
-logo, QR de confirmación por WhatsApp y firma) · Pagos (anticipos,
-abonos, saldo) · Garantías · Agenda (entregas, citas, recordatorios) ·
-Reportes (CSV, Excel, PDF) · Búsqueda global (Ctrl/Cmd+K) · Usuarios y
-roles · Bitácora de cambios (auditoría, solo lectura, no editable).
+consecutivo, estados, fotos antes/después, firmas, impuestos) ·
+Catálogo de servicios · Inventario (alertas de stock mínimo) ·
+Cotizaciones (IVA/ISR/descuento editables, PDF con logo, envío por
+WhatsApp/correo, QR de confirmación y firma) · Pagos (anticipos, abonos,
+saldo) · Garantías · Agenda (entregas, citas, recordatorios) · Reportes
+(CSV, Excel, PDF) · Búsqueda global (Ctrl/Cmd+K) · Usuarios y roles ·
+Bitácora de cambios (auditoría, solo lectura, no editable) ·
+Configuración (datos del negocio, logotipo, tasas de IVA/ISR por
+defecto — solo administrador).
+
+**Impuestos y totales**: toda la aritmética de IVA/ISR/descuento vive en
+un solo lugar (`src/core/tax.service.js`, funciones `calcularIVA`,
+`calcularISR`, `calcularDescuento`, `calcularTotales`) y el control de
+formulario correspondiente en `src/components/ui/tax-section.js` —
+tanto cotizaciones como órdenes de servicio reutilizan ambos en vez de
+tener su propia copia. El IVA es editable (no fijo a 16%) y el ISR es
+una retención que se resta del total, no se suma.
 
 ## PWA
 

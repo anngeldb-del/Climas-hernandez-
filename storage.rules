@@ -10,6 +10,7 @@ rules_version = '2';
 //   /service-orders/{orderId}/signatures/{fileName}   client/technician signatures
 //   /warranties/{warrantyId}/{fileName}               warranty evidence
 //   /quotes/{quoteId}/signature/{fileName}             quote sign-off
+//   /settings/{fileName}                              custom logo override (admin-only write)
 //
 // Only signed-in users with an active profile may read or write, and every
 // upload is capped in size/type to avoid abuse of the bucket.
@@ -27,6 +28,11 @@ function isActiveUser() {
 function isValidImage() {
   return request.resource.size < 10 * 1024 * 1024 &&
     request.resource.contentType.matches('image/.*');
+}
+
+function isAdmin() {
+  return isActiveUser() &&
+    firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
 }
 
 service firebase.storage {
@@ -49,6 +55,11 @@ service firebase.storage {
     match /quotes/{quoteId}/{subPath=**} {
       allow read: if isActiveUser();
       allow write: if isActiveUser() && isValidImage();
+    }
+
+    match /settings/{fileName} {
+      allow read: if isActiveUser();
+      allow write: if isAdmin() && isValidImage();
     }
   }
 }
