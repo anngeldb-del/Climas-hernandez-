@@ -43,7 +43,7 @@ export function printOrderTicket(order) {
     </style>
     </head><body>
       <div class="header">
-        <img src="${location.origin}/${BUSINESS.logo.default}" alt="logo" />
+        <img src="${location.origin}/${BUSINESS.logo.hd}" alt="logo" />
         <div>
           <h2>${BUSINESS.name}</h2>
           <p>${BUSINESS.slogan}</p>
