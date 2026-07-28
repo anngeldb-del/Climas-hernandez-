@@ -118,31 +118,38 @@ export async function buildQuotePdfDoc(quote) {
     if (y > 250) { doc.addPage(); y = 20; }
   }
 
+  // Labels are right-aligned ending at TOTALS_LABEL_X and values right-aligned
+  // ending at TOTALS_VALUE_X — long labels (e.g. "Retención ISR (1.25%):")
+  // grow further left instead of overflowing into the amount column, so
+  // they can never collide with the peso figure regardless of the rate's
+  // number of digits.
+  const TOTALS_LABEL_X = 172;
+  const TOTALS_VALUE_X = 195;
+  function totalsLine(label, value) {
+    doc.text(label, TOTALS_LABEL_X, y, { align: 'right' });
+    doc.text(value, TOTALS_VALUE_X, y, { align: 'right' });
+  }
+
   y += 4;
   doc.line(120, y, 195, y);
   y += 6;
-  doc.text('Subtotal:', 148, y);
-  doc.text(formatCurrency(quote.subtotal), 175, y);
+  totalsLine('Subtotal:', formatCurrency(quote.subtotal));
   if (quote.discount > 0) {
     y += 6;
-    doc.text('Descuento:', 148, y);
-    doc.text(`-${formatCurrency(quote.discount)}`, 175, y);
+    totalsLine('Descuento:', `-${formatCurrency(quote.discount)}`);
   }
   if (quote.taxEnabled) {
     y += 6;
-    doc.text(`IVA (${quote.taxRate ?? 0}%):`, 148, y);
-    doc.text(formatCurrency(quote.tax), 175, y);
+    totalsLine(`IVA (${quote.taxRate ?? 0}%):`, formatCurrency(quote.tax));
   }
   if (quote.isrEnabled) {
     y += 6;
-    doc.text(`Retención ISR (${quote.isrRate ?? 0}%):`, 148, y);
-    doc.text(`-${formatCurrency(quote.isr)}`, 175, y);
+    totalsLine(`Retención ISR (${quote.isrRate ?? 0}%):`, `-${formatCurrency(quote.isr)}`);
   }
   y += 7;
   doc.setFontSize(12);
   doc.setFont(undefined, 'bold');
-  doc.text('TOTAL:', 148, y);
-  doc.text(formatCurrency(quote.total), 175, y);
+  totalsLine('TOTAL:', formatCurrency(quote.total));
 
   y += 14;
   doc.setFontSize(9);
