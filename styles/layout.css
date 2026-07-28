@@ -155,7 +155,8 @@
     border-right: none;
     border-top: 1px solid var(--color-border);
     flex-direction: row;
-    height: 64px;
+    height: calc(64px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
     min-width: 0;
   }
   .sidebar__brand { display: none; }
