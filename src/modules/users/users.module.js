@@ -10,9 +10,8 @@
  * createUserWithEmailAndPassword from an already-authenticated session.
  */
 
-import { subscribe, update } from '../../core/db.service.js';
-import { functions, httpsCallable } from '../../core/firebase.init.js';
-import { COLLECTIONS, ROLES, ROLE_LABELS } from '../../config/constants.js';
+import { subscribeUsers, updateUser, createUserAccount } from './users.service.js';
+import { ROLES, ROLE_LABELS } from '../../config/constants.js';
 import { renderTable } from '../../components/ui/table.js';
 import { openModal } from '../../components/ui/modal.js';
 import { buildForm, readForm, validateForm } from '../../components/ui/form-builder.js';
@@ -62,7 +61,7 @@ function openEditModal(user) {
   footer.querySelector('#save').addEventListener('click', async () => {
     if (!validateForm(form)) return;
     const data = readForm(form);
-    await update(COLLECTIONS.USERS, user.id, data);
+    await updateUser(user.id, data);
     showToast('Usuario actualizado', 'success');
     modal.close();
   });
@@ -90,7 +89,6 @@ function openCreateModal() {
     saveBtn.disabled = true;
     saveBtn.textContent = 'Creando…';
     try {
-      const createUserAccount = httpsCallable(functions, 'createUserAccount');
       await createUserAccount(data);
       showToast('Usuario creado correctamente', 'success');
       modal.close();
@@ -118,7 +116,7 @@ async function mount(root) {
   `;
   container.querySelector('#new-user').addEventListener('click', openCreateModal);
 
-  unsubscribe = subscribe(COLLECTIONS.USERS, [], (data) => {
+  unsubscribe = subscribeUsers((data) => {
     users = data;
     renderList();
   });
