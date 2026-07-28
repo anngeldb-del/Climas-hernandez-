@@ -39,8 +39,8 @@ const NAV_SECTIONS = [
     title: 'Taller',
     items: [
       { key: 'clients', label: 'Clientes', icon: 'clients' },
-      { key: 'service-orders', label: 'Órdenes', icon: 'order' },
       { key: 'vehicles', label: 'Vehículos', icon: 'vehicle' },
+      { key: 'service-orders', label: 'Órdenes', icon: 'order' },
       { key: 'warranties', label: 'Garantías', icon: 'warranty' }
     ]
   },
