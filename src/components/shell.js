@@ -12,7 +12,7 @@ import { ROLE_LABELS } from '../config/constants.js';
 import { hasAccess, logout } from '../core/auth.service.js';
 import { navigate } from '../core/router.js';
 import { getTheme, toggleTheme } from '../core/theme.service.js';
-import { canInstall, promptInstall } from '../core/pwa.service.js';
+import { canInstall, promptInstall, isManualInstallOnly } from '../core/pwa.service.js';
 import { openGlobalSearch } from '../modules/search/search.module.js';
 import { openModal } from './ui/modal.js';
 import { getEffectiveBusiness } from '../core/settings.service.js';
@@ -121,6 +121,14 @@ export function renderShell(root, session) {
   if (canInstall()) installBtn.classList.remove('hidden');
   document.addEventListener('pwa:installable', () => installBtn.classList.remove('hidden'));
   installBtn.addEventListener('click', async () => {
+    if (isManualInstallOnly()) {
+      openModal({
+        title: 'Instalar en iPhone/iPad',
+        body: '<p>Toca el botón <strong>Compartir</strong> en la barra de Safari (el cuadro con una flecha hacia arriba) y luego <strong>"Agregar a pantalla de inicio"</strong>.</p>',
+        maxWidth: '360px'
+      });
+      return;
+    }
     const accepted = await promptInstall();
     if (accepted) installBtn.classList.add('hidden');
   });

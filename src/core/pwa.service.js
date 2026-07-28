@@ -11,6 +11,20 @@ import { showToast } from '../components/ui/toast.js';
 
 let deferredInstallPrompt = null;
 
+/** Safari (iOS/iPadOS) never fires beforeinstallprompt — there is no feature to detect it by, so UA sniffing is the only option here. */
+function isIosSafari() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+}
+
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+}
+
+/** True when the only way to "install" is the manual Share -> Add to Home Screen gesture (no native browser prompt exists to trigger). */
+export function isManualInstallOnly() {
+  return isIosSafari() && !isStandalone() && !deferredInstallPrompt;
+}
+
 export function initPWA() {
   if (!('serviceWorker' in navigator)) return;
 
@@ -42,7 +56,7 @@ export function initPWA() {
 }
 
 export function canInstall() {
-  return Boolean(deferredInstallPrompt);
+  return Boolean(deferredInstallPrompt) || isManualInstallOnly();
 }
 
 export async function promptInstall() {
