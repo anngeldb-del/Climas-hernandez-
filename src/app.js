@@ -13,9 +13,11 @@ import { renderLoginScreen } from './components/login-screen.js';
 import { initRouter } from './core/router.js';
 import { initPWA } from './core/pwa.service.js';
 import { applyTheme, getTheme } from './core/theme.service.js';
+import { initSettings } from './core/settings.service.js';
 
 applyTheme(getTheme());
 initPWA();
+initSettings();
 
 const root = document.getElementById('app-root');
 let shellMounted = false;

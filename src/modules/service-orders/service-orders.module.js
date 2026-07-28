@@ -9,7 +9,7 @@
  */
 
 import {
-  subscribeOrders, getOrder, createOrder, updateOrder, setOrderStatus, computeTotal
+  subscribeOrders, getOrder, createOrder, updateOrder, setOrderStatus
 } from './service-orders.service.js';
 import { getAll } from '../../core/db.service.js';
 import { where } from '../../core/firebase.init.js';
@@ -22,6 +22,7 @@ import { renderTable, sortRows } from '../../components/ui/table.js';
 import { buildForm, readForm, validateForm } from '../../components/ui/form-builder.js';
 import { createSearchSelect } from '../../components/ui/search-select.js';
 import { createLineItems } from '../../components/ui/line-items.js';
+import { createTaxSection } from '../../components/ui/tax-section.js';
 import { createPhotoUploader } from '../../components/ui/file-upload.js';
 import { createSignaturePad } from '../../components/ui/signature-pad.js';
 import { canvasToFile, uploadPhoto } from '../../core/storage.service.js';
@@ -31,6 +32,8 @@ import { icon } from '../../components/ui/icons.js';
 import { navigate } from '../../core/router.js';
 import { debounce, normalizeText, formatDate, formatCurrency } from '../../core/utils.js';
 import { printOrderTicket } from './order-ticket.print.js';
+import { getCachedSettings } from '../../core/settings.service.js';
+import { calcularTotales } from '../../core/tax.service.js';
 
 let unsubscribers = [];
 let container = null;
@@ -141,10 +144,11 @@ async function mountNewOrder() {
       <h3>Refacciones</h3>
       <div id="parts-lines"></div>
 
-      <div class="grid grid--form section">
+      <div class="grid grid--form">
         <div class="field"><label class="field__label">Mano de obra</label><input class="input" type="number" min="0" step="0.01" id="laborCost" value="0" /></div>
-        <div class="field"><label class="field__label">Total</label><input class="input" id="total-display" disabled /></div>
       </div>
+
+      <div id="tax-section"></div>
 
       <details class="collapsible">
         <summary>Más detalles (opcional)</summary>
@@ -153,6 +157,7 @@ async function mountNewOrder() {
           <div class="field"><label class="field__label">Tiempo estimado</label><input class="input" id="estimatedTime" placeholder="Ej. 2 horas" /></div>
           <div class="field"><label class="field__label">Fecha de entrega estimada</label><input class="input" type="date" id="estimatedDelivery" /></div>
           <div class="field"><label class="field__label">Diagnóstico técnico</label><textarea class="textarea" id="diagnosis"></textarea></div>
+          <div class="field"><label class="field__label">Observaciones</label><textarea class="textarea" id="notes" placeholder="Notas adicionales para el ticket impreso"></textarea></div>
         </div>
       </details>
 
@@ -225,14 +230,18 @@ async function mountNewOrder() {
 
   const linesEl = container.querySelector('#parts-lines');
   const laborInput = container.querySelector('#laborCost');
-  const totalDisplay = container.querySelector('#total-display');
-  const lineItems = createLineItems(linesEl, {
-    onChange: (_items, partsTotal) => { totalDisplay.value = formatCurrency(partsTotal + (Number(laborInput.value) || 0)); }
+  const lineItems = createLineItems(linesEl, { onChange: () => taxSection.refresh() });
+  laborInput.addEventListener('input', () => taxSection.refresh());
+
+  const settings = getCachedSettings();
+  const taxSection = createTaxSection(container.querySelector('#tax-section'), {
+    getItems: () => lineItems.getItems(),
+    getLaborCost: () => Number(laborInput.value) || 0,
+    defaults: {
+      ivaEnabled: settings.ivaEnabledByDefault, ivaRate: settings.ivaRate,
+      isrEnabled: settings.isrEnabledByDefault, isrRate: settings.isrRate
+    }
   });
-  laborInput.addEventListener('input', () => {
-    totalDisplay.value = formatCurrency(lineItems.getTotal() + (Number(laborInput.value) || 0));
-  });
-  totalDisplay.value = formatCurrency(0);
 
   container.querySelector('#order-form').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -243,8 +252,8 @@ async function mountNewOrder() {
     const submitBtn = event.target.querySelector('button[type=submit]');
     submitBtn.disabled = true;
     try {
-      const partsItems = lineItems.getItems();
-      const laborCost = Number(laborInput.value) || 0;
+      const values = taxSection.getValues();
+      const totals = calcularTotales(values);
       const { id } = await createOrder({
         clientId: selectedClient.id,
         clientName: selectedClient.name,
@@ -259,11 +268,15 @@ async function mountNewOrder() {
         estimatedTime: container.querySelector('#estimatedTime').value,
         estimatedDelivery: container.querySelector('#estimatedDelivery').value || null,
         diagnosis: container.querySelector('#diagnosis').value,
+        notes: container.querySelector('#notes').value,
         serviceRequested: container.querySelector('#serviceRequested').value,
         serviceDone: '', // filled in later, once the technician has actually done the work
-        partsItems,
-        laborCost,
-        total: computeTotal(partsItems, laborCost)
+        partsItems: values.items,
+        laborCost: values.laborCost,
+        taxEnabled: values.taxEnabled, taxRate: values.taxRate,
+        isrEnabled: values.isrEnabled, isrRate: values.isrRate,
+        discountEnabled: values.discountEnabled, discountType: values.discountType, discountValue: values.discountValue,
+        ...totals // subtotal, discount, taxableBase, tax, isr, total
       });
       showToast('Orden creada correctamente', 'success');
       navigate('service-orders', id);
@@ -386,17 +399,24 @@ async function mountDetail(orderId) {
           <p class="text-sm"><strong>Diagnóstico:</strong> ${order.diagnosis || '—'}</p>
           <p class="text-sm"><strong>Servicio solicitado:</strong> ${order.serviceRequested || '—'}</p>
           <p class="text-sm"><strong>Servicio realizado:</strong> ${order.serviceDone || '—'}</p>
+          <p class="text-sm"><strong>Observaciones:</strong> ${order.notes || '—'}</p>
         </div>
         <div class="card">
           <h3>Costos</h3>
           <table class="table">
             <thead><tr><th>Concepto</th><th>Cant.</th><th>P. Unit.</th><th>Importe</th></tr></thead>
             <tbody>
-              ${(order.partsItems || []).map((r) => `<tr><td>${r.description}</td><td>${r.quantity}</td><td>${formatCurrency(r.unitPrice)}</td><td>${formatCurrency(r.quantity * r.unitPrice)}</td></tr>`).join('')}
-              <tr><td colspan="3" style="text-align:right"><strong>Mano de obra</strong></td><td>${formatCurrency(order.laborCost)}</td></tr>
+              ${(order.partsItems || []).map((r) => `<tr><td data-label="Concepto">${r.description}</td><td data-label="Cant.">${r.quantity}</td><td data-label="P. Unit.">${formatCurrency(r.unitPrice)}</td><td data-label="Importe">${formatCurrency(r.quantity * r.unitPrice)}</td></tr>`).join('')}
+              <tr><td colspan="3" data-label="" style="text-align:right"><strong>Mano de obra</strong></td><td data-label="Mano de obra">${formatCurrency(order.laborCost)}</td></tr>
             </tbody>
           </table>
-          <p class="text-right"><strong>Total: ${formatCurrency(order.total)}</strong></p>
+          <div class="text-right">
+            <p>Subtotal: <strong>${formatCurrency(order.subtotal ?? (order.total || 0))}</strong></p>
+            ${order.discount > 0 ? `<p>Descuento: <strong>-${formatCurrency(order.discount)}</strong></p>` : ''}
+            ${order.taxEnabled ? `<p>IVA (${order.taxRate}%): <strong>${formatCurrency(order.tax)}</strong></p>` : ''}
+            ${order.isrEnabled ? `<p>Retención ISR (${order.isrRate}%): <strong>-${formatCurrency(order.isr)}</strong></p>` : ''}
+            <p style="font-size:1.25rem"><strong>Total: ${formatCurrency(order.total)}</strong></p>
+          </div>
           <p class="text-right text-muted">Pagado: ${formatCurrency(order.amountPaid)} · Saldo: ${formatCurrency(Math.max(0, order.total - (order.amountPaid || 0)))}</p>
           <button class="btn btn--outline btn--sm" id="go-payments">Registrar pago</button>
         </div>

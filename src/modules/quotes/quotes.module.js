@@ -5,13 +5,14 @@
  * service-orders: #/quotes, #/quotes/new, #/quotes/{id}.
  */
 
-import { subscribeQuotes, getQuote, createQuote, updateQuote, deleteQuote, computeQuoteTotals, DEFAULT_ISR_RATE } from './quotes.service.js';
+import { subscribeQuotes, getQuote, createQuote, updateQuote, deleteQuote } from './quotes.service.js';
 import { getAll } from '../../core/db.service.js';
-import { COLLECTIONS, BUSINESS } from '../../config/constants.js';
+import { COLLECTIONS } from '../../config/constants.js';
 import { getVehiclesByClient, vehicleLabel } from '../vehicles/vehicles.service.js';
 import { renderTable, sortRows } from '../../components/ui/table.js';
 import { createSearchSelect } from '../../components/ui/search-select.js';
 import { createLineItems } from '../../components/ui/line-items.js';
+import { createTaxSection } from '../../components/ui/tax-section.js';
 import { createSignaturePad } from '../../components/ui/signature-pad.js';
 import { canvasToFile, uploadPhoto } from '../../core/storage.service.js';
 import { confirmDialog } from '../../components/ui/modal.js';
@@ -20,6 +21,8 @@ import { icon } from '../../components/ui/icons.js';
 import { navigate } from '../../core/router.js';
 import { formatCurrency, formatDate, downloadBlob, waLink } from '../../core/utils.js';
 import { generateQuotePdf, getQuotePdfFile } from './quote-pdf.js';
+import { getCachedSettings, getEffectiveBusiness } from '../../core/settings.service.js';
+import { calcularTotales } from '../../core/tax.service.js';
 
 let unsubscribers = [];
 let container = null;
@@ -32,24 +35,26 @@ let sortDir = 'desc';
 
 /** Shared letterhead so every quote screen (form + detail) carries the same branding as the exported PDF. */
 function letterheadHtml() {
+  const business = getEffectiveBusiness();
   return `
     <div class="flex items-center gap-3" style="margin-bottom:var(--space-5)">
-      <img src="${BUSINESS.logo.default}" alt="${BUSINESS.name}" style="height:48px;width:auto" />
+      <img src="${business.logo}" alt="${business.name}" style="height:48px;width:auto" />
       <div>
-        <strong>${BUSINESS.name}</strong>
-        <div class="text-xs text-muted">${BUSINESS.slogan}</div>
+        <strong>${business.name}</strong>
+        <div class="text-xs text-muted">${business.slogan}</div>
       </div>
     </div>
   `;
 }
 
-/** Single source of the subtotal/IVA/ISR/total lines — used by both the live form preview and the read-only detail view. */
-function totalsLinesHtml({ subtotal, tax, taxEnabled, isr, isrEnabled, isrRate, total }) {
+/** Read-only version of the tax-section's totals block, for the detail view. */
+function totalsLinesHtml(quote) {
   return `
-    <p>Subtotal: <strong>${formatCurrency(subtotal)}</strong></p>
-    ${taxEnabled ? `<p>IVA (16%): <strong>${formatCurrency(tax)}</strong></p>` : ''}
-    ${isrEnabled ? `<p>Retención ISR (${isrRate}%): <strong>-${formatCurrency(isr)}</strong></p>` : ''}
-    <p style="font-size:1.25rem">Total: <strong>${formatCurrency(total)}</strong></p>
+    <p>Subtotal: <strong>${formatCurrency(quote.subtotal)}</strong></p>
+    ${quote.discount > 0 ? `<p>Descuento: <strong>-${formatCurrency(quote.discount)}</strong></p>` : ''}
+    ${quote.taxEnabled ? `<p>IVA (${quote.taxRate}%): <strong>${formatCurrency(quote.tax)}</strong></p>` : ''}
+    ${quote.isrEnabled ? `<p>Retención ISR (${quote.isrRate}%): <strong>-${formatCurrency(quote.isr)}</strong></p>` : ''}
+    <p style="font-size:1.25rem">Total: <strong>${formatCurrency(quote.total)}</strong></p>
   `;
 }
 
@@ -100,24 +105,7 @@ async function mountNewQuote() {
       <h3>Conceptos</h3>
       <div id="quote-lines"></div>
 
-      <details class="collapsible">
-        <summary>Impuestos (opcional)</summary>
-        <div class="collapsible__body grid grid--form">
-          <div class="field">
-            <label class="flex items-center gap-2"><input type="checkbox" id="tax-enabled" /> Incluir IVA (16%)</label>
-          </div>
-          <div class="field">
-            <label class="flex items-center gap-2"><input type="checkbox" id="isr-enabled" /> Aplicar retención de ISR</label>
-          </div>
-          <div class="field" id="isr-rate-field" style="display:none">
-            <label class="field__label">Porcentaje de retención</label>
-            <input class="input" type="number" id="isr-rate" min="0" max="100" step="0.25" value="${DEFAULT_ISR_RATE}" />
-            <span class="field__hint">Incrementos de 0.25 — ajusta si tu caso usa otro porcentaje</span>
-          </div>
-        </div>
-      </details>
-
-      <div class="text-right section" id="totals-preview"></div>
+      <div id="tax-section"></div>
 
       <div class="flex justify-end gap-2">
         <button type="button" class="btn btn--outline" id="cancel">Cancelar</button>
@@ -148,34 +136,22 @@ async function mountNewQuote() {
     }
   });
 
-  const taxCheckbox = container.querySelector('#tax-enabled');
-  const isrCheckbox = container.querySelector('#isr-enabled');
-  const isrRateField = container.querySelector('#isr-rate-field');
-  const isrRateInput = container.querySelector('#isr-rate');
+  const lineItems = createLineItems(container.querySelector('#quote-lines'), { onChange: () => taxSection.refresh() });
 
-  function currentTotals() {
-    return computeQuoteTotals(lineItems.getItems(), taxCheckbox.checked, isrCheckbox.checked, Number(isrRateInput.value));
-  }
-  function refreshTotals() {
-    const totals = currentTotals();
-    container.querySelector('#totals-preview').innerHTML = totalsLinesHtml({
-      ...totals, taxEnabled: taxCheckbox.checked, isrEnabled: isrCheckbox.checked, isrRate: isrRateInput.value
-    });
-  }
-
-  const lineItems = createLineItems(container.querySelector('#quote-lines'), { onChange: refreshTotals });
-  taxCheckbox.addEventListener('change', refreshTotals);
-  isrCheckbox.addEventListener('change', () => {
-    isrRateField.style.display = isrCheckbox.checked ? '' : 'none';
-    refreshTotals();
+  const settings = getCachedSettings();
+  const taxSection = createTaxSection(container.querySelector('#tax-section'), {
+    getItems: () => lineItems.getItems(),
+    defaults: {
+      ivaEnabled: settings.ivaEnabledByDefault, ivaRate: settings.ivaRate,
+      isrEnabled: settings.isrEnabledByDefault, isrRate: settings.isrRate
+    }
   });
-  isrRateInput.addEventListener('input', refreshTotals);
-  refreshTotals();
 
   container.querySelector('#quote-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!selectedClient) { showToast('Selecciona un cliente', 'warning'); return; }
-    const { subtotal, tax, isr, total } = currentTotals();
+    const values = taxSection.getValues();
+    const totals = calcularTotales(values);
     try {
       const { id } = await createQuote({
         clientId: selectedClient.id,
@@ -184,10 +160,11 @@ async function mountNewQuote() {
         clientEmail: selectedClient.email || '',
         vehicleId: selectedVehicle?.id || null,
         vehicleLabel: selectedVehicle ? vehicleLabel(selectedVehicle) : '',
-        items: lineItems.getItems(),
-        taxEnabled: taxCheckbox.checked, subtotal, tax,
-        isrEnabled: isrCheckbox.checked, isrRate: Number(isrRateInput.value), isr,
-        total
+        items: values.items,
+        taxEnabled: values.taxEnabled, taxRate: values.taxRate,
+        isrEnabled: values.isrEnabled, isrRate: values.isrRate,
+        discountEnabled: values.discountEnabled, discountType: values.discountType, discountValue: values.discountValue,
+        ...totals // subtotal, discount, taxableBase, tax, isr, total
       });
       showToast('Cotización creada', 'success');
       navigate('quotes', id);
@@ -200,6 +177,7 @@ async function mountNewQuote() {
 
 /** Web Share API (attaches the actual PDF, ideal on phones) with a mailto: fallback for browsers that can't share files. */
 async function sendQuoteByEmail(quote) {
+  const business = getEffectiveBusiness();
   const file = await getQuotePdfFile(quote);
 
   if (navigator.canShare?.({ files: [file] })) {
@@ -207,7 +185,7 @@ async function sendQuoteByEmail(quote) {
       await navigator.share({
         files: [file],
         title: `Cotización ${quote.folioLabel}`,
-        text: `Cotización ${quote.folioLabel} de ${BUSINESS.name} para ${quote.clientName} — ${formatCurrency(quote.total)}.`
+        text: `Cotización ${quote.folioLabel} de ${business.name} para ${quote.clientName} — ${formatCurrency(quote.total)}.`
       });
       return;
     } catch (error) {
@@ -218,10 +196,10 @@ async function sendQuoteByEmail(quote) {
   // Fallback (mailto: can't attach files): download the PDF and open a pre-filled draft to attach it to manually.
   downloadBlob(file, file.name);
 
-  const subject = encodeURIComponent(`Cotización ${quote.folioLabel} — ${BUSINESS.name}`);
+  const subject = encodeURIComponent(`Cotización ${quote.folioLabel} — ${business.name}`);
   const body = encodeURIComponent(
     `Hola ${quote.clientName || ''},\n\nAdjunto la cotización ${quote.folioLabel} por un total de ${formatCurrency(quote.total)}.\n\n` +
-    `Saludos,\n${BUSINESS.name}`
+    `Saludos,\n${business.name}`
   );
   window.location.href = `mailto:${quote.clientEmail || ''}?subject=${subject}&body=${body}`;
   showToast('Se descargó el PDF — adjúntalo en el correo que se acaba de abrir', 'info');
@@ -235,10 +213,11 @@ async function sendQuoteByEmail(quote) {
  * which is the same approach the PDF's own confirmation QR code uses.
  */
 async function sendQuoteByWhatsApp(quote) {
+  const business = getEffectiveBusiness();
   const file = await getQuotePdfFile(quote);
   downloadBlob(file, file.name);
 
-  const message = `Hola ${quote.clientName || ''}, te comparto la cotización ${quote.folioLabel} de ${BUSINESS.name} ` +
+  const message = `Hola ${quote.clientName || ''}, te comparto la cotización ${quote.folioLabel} de ${business.name} ` +
     `por un total de ${formatCurrency(quote.total)}. Adjunto el PDF que se acaba de descargar.`;
   window.open(waLink(quote.clientPhone, message), '_blank');
   showToast('Se descargó el PDF — adjúntalo en la conversación de WhatsApp que se acaba de abrir', 'info');
@@ -269,7 +248,7 @@ async function mountDetail(quoteId) {
         <h3>Conceptos</h3>
         <table class="table">
           <thead><tr><th>Descripción</th><th>Cant.</th><th>P. Unit.</th><th>Importe</th></tr></thead>
-          <tbody>${(quote.items || []).map((i) => `<tr><td>${i.description}</td><td>${i.quantity}</td><td>${formatCurrency(i.unitPrice)}</td><td>${formatCurrency(i.quantity * i.unitPrice)}</td></tr>`).join('')}</tbody>
+          <tbody>${(quote.items || []).map((i) => `<tr><td data-label="Descripción">${i.description}</td><td data-label="Cant.">${i.quantity}</td><td data-label="P. Unit.">${formatCurrency(i.unitPrice)}</td><td data-label="Importe">${formatCurrency(i.quantity * i.unitPrice)}</td></tr>`).join('')}</tbody>
         </table>
         <div class="text-right">${totalsLinesHtml(quote)}</div>
       </div>
