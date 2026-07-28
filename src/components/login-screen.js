@@ -18,6 +18,37 @@ const AUTH_ERROR_MESSAGES = {
   'auth/too-many-requests': 'Demasiados intentos. Intenta de nuevo más tarde.'
 };
 
+/**
+ * Soft, client-side attempt limiter — proactive feedback before Firebase
+ * Auth's own server-side throttling (the "auth/too-many-requests" case
+ * above) would otherwise kick in silently. This is a UX layer, not the
+ * real defense: it lives in memory and resets on page reload, so it
+ * doesn't stop a determined attacker. Hard protection against brute force
+ * is Firebase Auth's own backend throttling, optionally hardened further
+ * with App Check + reCAPTCHA configured in the project's Firebase console.
+ */
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MS = 30_000;
+const failuresByEmail = new Map();
+
+function recordFailure(email) {
+  const entry = failuresByEmail.get(email) || { count: 0, lockedUntil: 0 };
+  entry.count += 1;
+  if (entry.count >= MAX_ATTEMPTS) entry.lockedUntil = Date.now() + LOCKOUT_MS;
+  failuresByEmail.set(email, entry);
+  return entry;
+}
+
+function clearFailures(email) {
+  failuresByEmail.delete(email);
+}
+
+function lockoutRemainingMs(email) {
+  const entry = failuresByEmail.get(email);
+  if (!entry || !entry.lockedUntil) return 0;
+  return Math.max(0, entry.lockedUntil - Date.now());
+}
+
 export function renderLoginScreen(root) {
   const business = getEffectiveBusiness();
   root.innerHTML = `
@@ -49,21 +80,51 @@ export function renderLoginScreen(root) {
   const form = document.getElementById('login-form');
   const submitBtn = document.getElementById('login-submit');
 
+  function startLockoutCountdown(email) {
+    const tick = () => {
+      const remaining = lockoutRemainingMs(email);
+      if (remaining <= 0) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Iniciar sesión';
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.textContent = `Espera ${Math.ceil(remaining / 1000)}s…`;
+      setTimeout(tick, 1000);
+    };
+    tick();
+  }
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const email = form.email.value.trim();
     const password = form.password.value;
     if (!email || !password) return;
 
+    if (lockoutRemainingMs(email) > 0) {
+      startLockoutCountdown(email);
+      showToast('Demasiados intentos fallidos. Espera antes de volver a intentar.', 'warning');
+      return;
+    }
+
     submitBtn.disabled = true;
     submitBtn.textContent = 'Ingresando…';
     try {
       await login(email, password);
+      clearFailures(email);
     } catch (error) {
+      recordFailure(email);
+      if (lockoutRemainingMs(email) > 0) {
+        startLockoutCountdown(email);
+        showToast('Demasiados intentos fallidos. Espera antes de volver a intentar.', 'warning');
+        return;
+      }
       showToast(AUTH_ERROR_MESSAGES[error.code] || 'No se pudo iniciar sesión.', 'danger');
     } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Iniciar sesión';
+      if (lockoutRemainingMs(email) <= 0) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Iniciar sesión';
+      }
     }
   });
 
