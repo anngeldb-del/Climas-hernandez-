@@ -99,6 +99,14 @@ service cloud.firestore {
       allow write: if hasAnyRole(['admin', 'recepcion', 'tecnico']);
     }
 
+    // Business-wide config: default tax rates, contact info, logo override.
+    // Every signed-in role reads it (quotes/orders need the default rates);
+    // only admin can change it.
+    match /settings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     match /appointments/{docId} {
       allow read: if hasAnyRole(['admin', 'recepcion', 'tecnico', 'auditor']);
       allow write: if hasAnyRole(['admin', 'recepcion']);

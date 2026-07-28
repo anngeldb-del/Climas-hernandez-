@@ -6,10 +6,10 @@
  * a signed-in, active user.
  */
 
-import { BUSINESS } from '../config/constants.js';
 import { login } from '../core/auth.service.js';
 import { auth, sendPasswordResetEmail } from '../core/firebase.init.js';
 import { showToast } from './ui/toast.js';
+import { getEffectiveBusiness } from '../core/settings.service.js';
 
 const AUTH_ERROR_MESSAGES = {
   'auth/invalid-credential': 'Correo o contraseña incorrectos.',
@@ -19,12 +19,13 @@ const AUTH_ERROR_MESSAGES = {
 };
 
 export function renderLoginScreen(root) {
+  const business = getEffectiveBusiness();
   root.innerHTML = `
     <div class="auth-screen">
       <form class="auth-card" id="login-form" novalidate>
-        <img class="logo" src="${BUSINESS.logo.default}" alt="${BUSINESS.name}" />
-        <h2>${BUSINESS.name}</h2>
-        <p class="text-sm">${BUSINESS.slogan}</p>
+        <img class="logo" src="${business.logo}" alt="${business.name}" />
+        <h2>${business.name}</h2>
+        <p class="text-sm">${business.slogan}</p>
 
         <div class="field text-left" style="text-align:left">
           <label class="field__label" for="login-email">Correo electrónico</label>
@@ -40,7 +41,7 @@ export function renderLoginScreen(root) {
           ¿Olvidaste tu contraseña?
         </button>
 
-        <p class="text-xs text-muted" style="margin-top:24px">${BUSINESS.address.full} · ${BUSINESS.phone}</p>
+        <p class="text-xs text-muted" style="margin-top:24px">${business.addressFull} · ${business.phone}</p>
       </form>
     </div>
   `;

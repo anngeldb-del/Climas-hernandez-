@@ -13,8 +13,8 @@
  * PDF twice.
  */
 
-import { BUSINESS } from '../../config/constants.js';
 import { formatCurrency, formatDate, waLink } from '../../core/utils.js';
+import { getEffectiveBusiness } from '../../core/settings.service.js';
 
 let jsPDFCtor = null;
 let qrToDataURL = null;
@@ -44,16 +44,18 @@ async function loadImageAsDataUrl(path) {
  * Assembles the jsPDF document for a quote. Does not save/download —
  * callers decide what to do with the result (save to disk, turn into a
  * Blob/File for sharing, etc).
- * @param {object} quote {folioLabel, createdAt, clientName, clientPhone, vehicleLabel, items, taxEnabled, subtotal, tax, isrEnabled, isrRate, isr, total, signatureUrl}
+ * @param {object} quote {folioLabel, createdAt, clientName, clientPhone, vehicleLabel, items,
+ *   subtotal, discount, taxEnabled, taxRate, tax, isrEnabled, isrRate, isr, total, signatureUrl}
  */
 export async function buildQuotePdfDoc(quote) {
   await ensureLibs();
+  const business = getEffectiveBusiness();
   const doc = new jsPDFCtor({ unit: 'mm', format: 'letter' });
   const marginX = 15;
   let y = 15;
 
   try {
-    const logoDataUrl = await loadImageAsDataUrl(BUSINESS.logo.hd);
+    const logoDataUrl = await loadImageAsDataUrl(business.logoHd);
     doc.addImage(logoDataUrl, 'PNG', marginX, y, 22, 22);
   } catch {
     // Logo fetch can fail offline; the PDF is still useful without it.
@@ -61,12 +63,12 @@ export async function buildQuotePdfDoc(quote) {
 
   doc.setFontSize(14);
   doc.setFont(undefined, 'bold');
-  doc.text(BUSINESS.name, marginX + 26, y + 6);
+  doc.text(business.name, marginX + 26, y + 6);
   doc.setFontSize(9);
   doc.setFont(undefined, 'normal');
-  doc.text(BUSINESS.slogan, marginX + 26, y + 11);
-  doc.text(BUSINESS.address.full, marginX + 26, y + 16);
-  doc.text(`Tel: ${BUSINESS.phone}`, marginX + 26, y + 21);
+  doc.text(business.slogan, marginX + 26, y + 11);
+  doc.text(business.addressFull, marginX + 26, y + 16);
+  doc.text(`Tel: ${business.phone}`, marginX + 26, y + 21);
 
   doc.setFontSize(12);
   doc.setFont(undefined, 'bold');
@@ -121,9 +123,14 @@ export async function buildQuotePdfDoc(quote) {
   y += 6;
   doc.text('Subtotal:', 148, y);
   doc.text(formatCurrency(quote.subtotal), 175, y);
+  if (quote.discount > 0) {
+    y += 6;
+    doc.text('Descuento:', 148, y);
+    doc.text(`-${formatCurrency(quote.discount)}`, 175, y);
+  }
   if (quote.taxEnabled) {
     y += 6;
-    doc.text('IVA (16%):', 148, y);
+    doc.text(`IVA (${quote.taxRate}%):`, 148, y);
     doc.text(formatCurrency(quote.tax), 175, y);
   }
   if (quote.isrEnabled) {
@@ -143,7 +150,7 @@ export async function buildQuotePdfDoc(quote) {
   doc.text('Escanea para confirmar por WhatsApp:', marginX, y + 20);
   try {
     const qrDataUrl = await qrToDataURL(
-      waLink(BUSINESS.phone, `Hola, quiero confirmar la cotización ${quote.folioLabel}`),
+      waLink(business.phone, `Hola, quiero confirmar la cotización ${quote.folioLabel}`),
       { margin: 1, width: 200 }
     );
     doc.addImage(qrDataUrl, 'PNG', marginX, y + 22, 24, 24);
