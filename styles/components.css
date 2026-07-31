@@ -166,16 +166,6 @@ table.table tbody tr[data-clickable] { cursor: pointer; }
 .nav-item:hover { background: var(--color-surface-alt); text-decoration: none; }
 .nav-item.active { background: var(--color-accent-soft); color: var(--color-brand-intense); }
 .nav-item__icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; }
-/* The "Más" entry only makes sense on the phone bottom bar — on desktop
-   every section is already listed in the sidebar, so showing it there
-   would just be a dead button. Scoped to min-width (rather than an
-   unconditional rule + a mobile override in layout.css) because this
-   file loads *after* layout.css: an unconditional rule here would win
-   the cascade over layout.css's mobile media query regardless of
-   viewport width, hiding the button on phones too. */
-@media (min-width: 721px) {
-  .nav-item--more { display: none; }
-}
 
 /* ---- Modal ----------------------------------------------------------------- */
 .modal-backdrop {
@@ -289,14 +279,6 @@ table.table tbody tr[data-clickable] { cursor: pointer; }
   padding: 10px 0; border-bottom: 1px solid var(--color-border);
 }
 .activity-row__meta { text-align: right; flex-shrink: 0; }
-
-/* ---- Mobile "más" sheet (see shell.js openMoreSheet) ----------------------------------- */
-.more-sheet-item {
-  display: flex; align-items: center; gap: var(--space-3);
-  padding: var(--space-3); border-radius: var(--radius-md);
-  font-size: var(--font-size-md); color: var(--color-text); cursor: pointer;
-}
-.more-sheet-item:hover { background: var(--color-surface-alt); }
 
 /* ---- Vehicles grouped by owner (vehicles.module.js) --------------------------------------- */
 .vehicle-group { margin-bottom: var(--space-5); }

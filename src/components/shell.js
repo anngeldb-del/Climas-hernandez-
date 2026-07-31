@@ -17,16 +17,6 @@ import { openGlobalSearch } from '../modules/search/search.module.js';
 import { openModal } from './ui/modal.js';
 import { getEffectiveBusiness } from '../core/settings.service.js';
 
-/**
- * On phone-width screens the sidebar becomes a bottom tab bar. Cramming
- * all ~13 sections into that bar forces tiny wrapped labels and — worse —
- * pushes the bar's min-content width past the viewport, which drags the
- * *entire page* into horizontal overflow (grid tracks size to their
- * content). Showing only these plus a "Más" sheet keeps the bar's
- * min-content narrow and the mobile UI minimal.
- */
-const PRIMARY_MOBILE_KEYS = ['dashboard', 'service-orders', 'clients', 'agenda'];
-
 const NAV_SECTIONS = [
   {
     title: 'General',
@@ -71,22 +61,22 @@ export function renderShell(root, session) {
 
   root.innerHTML = `
     <div id="app-shell">
+      <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
       <aside class="sidebar">
         <div class="sidebar__brand">
           <img src="${business.logo}" alt="${business.name}" />
           <div class="sidebar__brand-text">${business.name}<small>${ROLE_LABELS[session.role] || session.role}</small></div>
+          <button class="btn btn--icon btn--ghost sidebar__close" id="btn-close-sidebar" aria-label="Cerrar menú">
+            ${icon('close', { size: 18 })}
+          </button>
         </div>
         <nav class="sidebar__nav">
           ${NAV_SECTIONS.map((section) => renderSection(section)).join('')}
-          <div class="nav-item nav-item--more" data-primary id="nav-more-toggle">
-            <span class="nav-item__icon">${icon('menu')}</span>
-            <span class="nav-item__label">Más</span>
-          </div>
         </nav>
       </aside>
 
       <header class="topbar">
-        <button class="btn btn--icon btn--ghost" id="btn-toggle-sidebar" aria-label="Menú" style="display:none">
+        <button class="btn btn--icon btn--ghost" id="btn-toggle-sidebar" aria-label="Abrir menú">
           ${icon('menu')}
         </button>
         <button class="btn btn--outline topbar__search" id="btn-global-search">
@@ -104,8 +94,24 @@ export function renderShell(root, session) {
     </div>
   `;
 
+  const sidebarEl = document.querySelector('.sidebar');
+  const backdropEl = document.getElementById('sidebar-backdrop');
+
+  function openSidebar() {
+    sidebarEl.classList.add('sidebar--open');
+    backdropEl.classList.add('sidebar-backdrop--visible');
+  }
+  function closeSidebar() {
+    sidebarEl.classList.remove('sidebar--open');
+    backdropEl.classList.remove('sidebar-backdrop--visible');
+  }
+
+  document.getElementById('btn-toggle-sidebar').addEventListener('click', openSidebar);
+  document.getElementById('btn-close-sidebar').addEventListener('click', closeSidebar);
+  backdropEl.addEventListener('click', closeSidebar);
+
   document.querySelectorAll('.nav-item[data-route]').forEach((el) => {
-    el.addEventListener('click', () => navigate(el.dataset.route));
+    el.addEventListener('click', () => { navigate(el.dataset.route); closeSidebar(); });
   });
 
   const themeBtn = document.getElementById('btn-theme');
@@ -115,7 +121,6 @@ export function renderShell(root, session) {
 
   document.getElementById('btn-global-search').addEventListener('click', openGlobalSearch);
   document.getElementById('btn-logout').addEventListener('click', logout);
-  document.getElementById('nav-more-toggle').addEventListener('click', openMoreSheet);
 
   const installBtn = document.getElementById('btn-install');
   if (canInstall()) installBtn.classList.remove('hidden');
@@ -150,29 +155,10 @@ function renderSection(section) {
   return `
     <div class="sidebar__section-title">${section.title}</div>
     ${visibleItems.map((item) => `
-      <div class="nav-item" data-route="${item.key}" ${PRIMARY_MOBILE_KEYS.includes(item.key) ? 'data-primary' : ''}>
+      <div class="nav-item" data-route="${item.key}">
         <span class="nav-item__icon">${icon(item.icon)}</span>
         <span class="nav-item__label">${item.label}</span>
       </div>
     `).join('')}
   `;
-}
-
-/** Phone-only "more" sheet: everything that doesn't fit in the compact bottom bar. */
-function openMoreSheet() {
-  const rest = NAV_SECTIONS.flatMap((section) => section.items)
-    .filter((item) => hasAccess(item.key) && !PRIMARY_MOBILE_KEYS.includes(item.key));
-
-  const body = document.createElement('div');
-  body.innerHTML = rest.map((item) => `
-    <div class="more-sheet-item" data-route="${item.key}">
-      <span class="nav-item__icon">${icon(item.icon)}</span>
-      <span>${item.label}</span>
-    </div>
-  `).join('');
-
-  const modal = openModal({ title: 'Más opciones', body, maxWidth: '360px' });
-  body.querySelectorAll('.more-sheet-item[data-route]').forEach((el) => {
-    el.addEventListener('click', () => { modal.close(); navigate(el.dataset.route); });
-  });
 }
