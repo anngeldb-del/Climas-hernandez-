@@ -24,7 +24,7 @@ export function getQuote(id) {
 export async function createQuote(data) {
   const folioNumber = await nextSequence(COLLECTIONS.QUOTES);
   const folioLabel = formatFolio(FOLIO_PREFIX, folioNumber);
-  const id = await create(COLLECTIONS.QUOTES, { ...data, folioNumber, folioLabel, signatureUrl: null });
+  const id = await create(COLLECTIONS.QUOTES, { ...data, folioNumber, folioLabel });
   return { id, folioLabel };
 }
 

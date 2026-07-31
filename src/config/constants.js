@@ -58,7 +58,7 @@ export const ROLE_PERMISSIONS = Object.freeze({
     'quotes', 'payments', 'agenda', 'search', 'warranties', 'reports'
   ],
   [ROLES.TECNICO]: ['dashboard', 'service-orders', 'agenda', 'search', 'warranties'],
-  [ROLES.AUDITOR]: ['dashboard', 'reports', 'audit', 'search']
+  [ROLES.AUDITOR]: ['dashboard', 'reports', 'search']
 });
 
 /** Service order lifecycle. Order matters — it drives the status stepper UI. */

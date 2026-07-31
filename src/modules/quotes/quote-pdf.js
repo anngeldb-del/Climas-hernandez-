@@ -165,16 +165,6 @@ export async function buildQuotePdfDoc(quote) {
     console.warn('[quote-pdf] QR generation failed', error);
   }
 
-  doc.text('Firma de conformidad:', 110, y + 20);
-  if (quote.signatureUrl) {
-    try {
-      const sigDataUrl = await loadImageAsDataUrl(quote.signatureUrl);
-      doc.addImage(sigDataUrl, 'PNG', 110, y + 22, 60, 24);
-    } catch { /* fall through to blank line below */ }
-  } else {
-    doc.line(110, y + 40, 190, y + 40);
-  }
-
   doc.setFontSize(8);
   doc.setTextColor(120);
   doc.text('Esta cotización tiene una vigencia de 15 días naturales a partir de su fecha de emisión.', marginX, 280);

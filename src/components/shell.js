@@ -48,7 +48,6 @@ const NAV_SECTIONS = [
     title: 'Sistema',
     items: [
       { key: 'users', label: 'Usuarios', icon: 'users' },
-      { key: 'audit', label: 'Bitácora', icon: 'audit' },
       { key: 'settings', label: 'Configuración', icon: 'settings' }
     ]
   }

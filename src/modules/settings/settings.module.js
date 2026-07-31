@@ -9,12 +9,11 @@
  */
 
 import {
-  getCachedSettings, saveSettings, uploadLogo
+  getCachedSettings, saveSettings
 } from '../../core/settings.service.js';
 import { clampPercent } from '../../core/tax.service.js';
 import { buildForm, readForm, validateForm } from '../../components/ui/form-builder.js';
 import { showToast } from '../../components/ui/toast.js';
-import { icon } from '../../components/ui/icons.js';
 import { BUSINESS } from '../../config/constants.js';
 
 let container = null;
@@ -52,11 +51,7 @@ async function mount(root) {
       <div class="flex items-center gap-4">
         <img id="logo-preview" src="${settings.logoUrl || BUSINESS.logo.default}" alt="Logo"
           style="height:64px;width:auto;border:1px solid var(--color-border);border-radius:8px;padding:4px;background:#fff" />
-        <div>
-          <input type="file" id="logo-file" accept="image/*" hidden />
-          <button type="button" class="btn btn--outline btn--sm" id="logo-upload-btn">${icon('upload', { size: 14 })} Cambiar logotipo</button>
-          <p class="field__hint mb-0">Se usará en toda la app, cotizaciones y tickets impresos.</p>
-        </div>
+        <p class="field__hint mb-0">Logotipo usado en toda la app, cotizaciones y tickets impresos.</p>
       </div>
     </div>
 
@@ -81,24 +76,6 @@ async function mount(root) {
 
   const taxForm = buildForm(taxFormFields(settings));
   container.querySelector('#tax-form-container').appendChild(taxForm);
-
-  container.querySelector('#logo-upload-btn').addEventListener('click', () => container.querySelector('#logo-file').click());
-  container.querySelector('#logo-file').addEventListener('change', async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    const btn = container.querySelector('#logo-upload-btn');
-    btn.disabled = true;
-    try {
-      const url = await uploadLogo(file);
-      container.querySelector('#logo-preview').src = url;
-      showToast('Logotipo actualizado', 'success');
-    } catch (error) {
-      console.error('[settings] logo upload failed', error);
-      showToast('No se pudo subir el logotipo', 'danger');
-    } finally {
-      btn.disabled = false;
-    }
-  });
 
   container.querySelector('#save-settings').addEventListener('click', async () => {
     if (!validateForm(businessForm)) return;

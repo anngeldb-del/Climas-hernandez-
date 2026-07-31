@@ -5,7 +5,7 @@
  * service-orders: #/quotes, #/quotes/new, #/quotes/{id}.
  */
 
-import { subscribeQuotes, getQuote, createQuote, updateQuote, deleteQuote } from './quotes.service.js';
+import { subscribeQuotes, getQuote, createQuote, deleteQuote } from './quotes.service.js';
 import { getAll } from '../../core/db.service.js';
 import { COLLECTIONS } from '../../config/constants.js';
 import { getVehiclesByClient, vehicleLabel } from '../vehicles/vehicles.service.js';
@@ -13,8 +13,6 @@ import { renderTable, sortRows } from '../../components/ui/table.js';
 import { createSearchSelect } from '../../components/ui/search-select.js';
 import { createLineItems } from '../../components/ui/line-items.js';
 import { createTaxSection } from '../../components/ui/tax-section.js';
-import { createSignaturePad } from '../../components/ui/signature-pad.js';
-import { canvasToFile, uploadPhoto } from '../../core/storage.service.js';
 import { confirmDialog } from '../../components/ui/modal.js';
 import { showToast } from '../../components/ui/toast.js';
 import { icon } from '../../components/ui/icons.js';
@@ -26,7 +24,6 @@ import { calcularTotales } from '../../core/tax.service.js';
 
 const unsubTracker = createUnsubTracker();
 let container = null;
-let signaturePads = [];
 
 let allQuotes = [];
 let sortKey = 'createdAt';
@@ -241,22 +238,14 @@ async function mountDetail(quoteId) {
       </div>
     </div>
 
-    <div class="grid grid--2">
-      <div class="card">
-        ${letterheadHtml()}
-        <h3>Conceptos</h3>
-        <table class="table">
-          <thead><tr><th>Descripción</th><th>Cant.</th><th>P. Unit.</th><th>Importe</th></tr></thead>
-          <tbody>${(quote.items || []).map((i) => `<tr><td data-label="Descripción">${escapeHtml(i.description || '')}</td><td data-label="Cant.">${Number(i.quantity) || 0}</td><td data-label="P. Unit.">${formatCurrency(i.unitPrice)}</td><td data-label="Importe">${formatCurrency((Number(i.quantity) || 0) * (Number(i.unitPrice) || 0))}</td></tr>`).join('')}</tbody>
-        </table>
-        <div class="text-right">${totalsLinesHtml(quote)}</div>
-      </div>
-      <div class="card">
-        <h3>Firma de conformidad</h3>
-        ${quote.signatureUrl
-          ? `<img src="${quote.signatureUrl}" alt="Firma" style="max-width:100%;border:1px solid var(--color-border);border-radius:8px" />`
-          : `<div id="sig-pad"></div><div class="flex gap-2" style="margin-top:8px"><button class="btn btn--outline btn--sm" id="sig-clear">Limpiar</button><button class="btn btn--primary btn--sm" id="sig-save">Guardar firma</button></div>`}
-      </div>
+    <div class="card">
+      ${letterheadHtml()}
+      <h3>Conceptos</h3>
+      <table class="table">
+        <thead><tr><th>Descripción</th><th>Cant.</th><th>P. Unit.</th><th>Importe</th></tr></thead>
+        <tbody>${(quote.items || []).map((i) => `<tr><td data-label="Descripción">${escapeHtml(i.description || '')}</td><td data-label="Cant.">${Number(i.quantity) || 0}</td><td data-label="P. Unit.">${formatCurrency(i.unitPrice)}</td><td data-label="Importe">${formatCurrency((Number(i.quantity) || 0) * (Number(i.unitPrice) || 0))}</td></tr>`).join('')}</tbody>
+      </table>
+      <div class="text-right">${totalsLinesHtml(quote)}</div>
     </div>
   `;
 
@@ -289,20 +278,6 @@ async function mountDetail(quoteId) {
     showToast('Cotización eliminada', 'success');
     navigate('quotes');
   });
-
-  if (!quote.signatureUrl) {
-    const pad = createSignaturePad(container.querySelector('#sig-pad'));
-    signaturePads.push(pad);
-    container.querySelector('#sig-clear').addEventListener('click', () => pad.clear());
-    container.querySelector('#sig-save').addEventListener('click', async () => {
-      if (pad.isEmpty()) { showToast('Captura la firma primero', 'warning'); return; }
-      const file = await canvasToFile(pad.canvas, `firma-${quoteId}.png`);
-      const { url } = await uploadPhoto(`quotes/${quoteId}/signature`, file);
-      await updateQuote(quoteId, { signatureUrl: url });
-      showToast('Firma guardada', 'success');
-      mountDetail(quoteId);
-    });
-  }
 }
 
 async function mount(root, ctx) {
@@ -316,8 +291,6 @@ async function mount(root, ctx) {
 
 function unmount() {
   unsubTracker.clear();
-  signaturePads.forEach((pad) => pad.destroy());
-  signaturePads = [];
   container = null;
 }
 

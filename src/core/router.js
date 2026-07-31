@@ -29,7 +29,6 @@ const routes = {
   agenda: () => import('../modules/agenda/agenda.module.js'),
   reports: () => import('../modules/reports/reports.module.js'),
   users: () => import('../modules/users/users.module.js'),
-  audit: () => import('../modules/audit/audit.module.js'),
   settings: () => import('../modules/settings/settings.module.js')
 };
 
