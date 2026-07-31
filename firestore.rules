@@ -21,49 +21,60 @@ rules_version = '2';
 //     incremented via transaction by roles allowed to create orders.
 // ---------------------------------------------------------------------------
 
-function isSignedIn() {
-  return request.auth != null;
-}
-
-function userDoc() {
-  return get(/databases/$(database)/documents/users/$(request.auth.uid));
-}
-
-function role() {
-  return isSignedIn() && userDoc().data.active == true
-    ? userDoc().data.role
-    : null;
-}
-
-function hasAnyRole(roles) {
-  return isSignedIn() && role() in roles;
-}
-
-function isAdmin() {
-  return role() == 'admin';
-}
-
-// Server-side backstop for the client-side clamping in tax.service.js —
-// a negative subtotal/tax/total or an out-of-range percentage should never
-// reach the database even if a compromised/buggy client tries to write one.
-function isValidRate(value) {
-  return value >= 0 && value <= 100;
-}
-
-function hasNonNegative(data, field) {
-  return !(field in data) || data[field] >= 0;
-}
-
-function hasValidTotals(data) {
-  return hasNonNegative(data, 'subtotal') && hasNonNegative(data, 'tax') &&
-    hasNonNegative(data, 'isr') && hasNonNegative(data, 'total') &&
-    hasNonNegative(data, 'discount') && hasNonNegative(data, 'laborCost') &&
-    (!('taxRate' in data) || isValidRate(data.taxRate)) &&
-    (!('isrRate' in data) || isValidRate(data.isrRate));
-}
-
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // -------------------------------------------------------------------
+    // Helper functions — MUST live inside this match block: `database` is
+    // captured by `match /databases/{database}/documents` above and is
+    // only in scope for code nested within it. Defining these functions
+    // outside this block (a common copy-paste mistake) silently breaks
+    // every get(/databases/$(database)/...) call inside them: $(database)
+    // resolves to nothing, the get() fails, role() always returns null,
+    // and every rule that depends on isAdmin()/hasAnyRole() denies access
+    // — even for a correctly-configured admin user.
+    // -------------------------------------------------------------------
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function role() {
+      return isSignedIn() && userDoc().data.active == true
+        ? userDoc().data.role
+        : null;
+    }
+
+    function hasAnyRole(roles) {
+      return isSignedIn() && role() in roles;
+    }
+
+    function isAdmin() {
+      return role() == 'admin';
+    }
+
+    // Server-side backstop for the client-side clamping in tax.service.js —
+    // a negative subtotal/tax/total or an out-of-range percentage should never
+    // reach the database even if a compromised/buggy client tries to write one.
+    function isValidRate(value) {
+      return value >= 0 && value <= 100;
+    }
+
+    function hasNonNegative(data, field) {
+      return !(field in data) || data[field] >= 0;
+    }
+
+    function hasValidTotals(data) {
+      return hasNonNegative(data, 'subtotal') && hasNonNegative(data, 'tax') &&
+        hasNonNegative(data, 'isr') && hasNonNegative(data, 'total') &&
+        hasNonNegative(data, 'discount') && hasNonNegative(data, 'laborCost') &&
+        (!('taxRate' in data) || isValidRate(data.taxRate)) &&
+        (!('isrRate' in data) || isValidRate(data.isrRate));
+    }
 
     // Users can always read their own profile (needed to bootstrap role
     // lookup in the UI); only admins manage roles/activation.
@@ -146,3 +157,4 @@ service cloud.firestore {
     }
   }
 }
+Fix:mover funciones de reglas dentro del scope de database
