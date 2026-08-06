@@ -72,7 +72,7 @@ export function printOrderTicket(order) {
       </div>
 
       <div class="field-row"><strong>Cliente:</strong> ${order.clientName || ''} &nbsp; <strong>Tel:</strong> ${order.clientPhone || ''}</div>
-      <div class="field-row"><strong>Vehículo:</strong> ${order.vehicleLabel || ''} &nbsp; <strong>Placas:</strong> ${order.vehiclePlates || ''} &nbsp; <strong>Color:</strong> ${order.vehicleColor || ''}</div>
+      <div class="field-row"><strong>Vehículo:</strong> ${order.vehicleLabel || ''} &nbsp; <strong>Placas:</strong> ${order.vehiclePlates || ''} &nbsp; <strong>Color:</strong> ${order.vehicleColor || ''}${order.unitNumber ? ` &nbsp; <strong>Número de unidad:</strong> ${order.unitNumber}` : ''}</div>
       <div class="field-row"><strong>Kilometraje:</strong> ${order.mileage || '—'} km</div>
       <div class="field-row"><strong>Servicio solicitado:</strong> ${order.serviceRequested || '—'}</div>
       ${order.diagnosis ? `<div class="field-row"><strong>Diagnóstico:</strong> ${order.diagnosis}</div>` : ''}
@@ -92,6 +92,7 @@ export function printOrderTicket(order) {
         ${order.discount > 0 ? `<p>Descuento: <strong>-${formatCurrency(order.discount)}</strong></p>` : ''}
         ${order.taxEnabled ? `<p>IVA (${order.taxRate ?? 0}%): <strong>${formatCurrency(order.tax)}</strong></p>` : ''}
         ${order.isrEnabled ? `<p>Retención ISR (${order.isrRate ?? 0}%): <strong>-${formatCurrency(order.isr)}</strong></p>` : ''}
+        ${order.extraDiscount > 0 ? `<p>Descuento adicional: <strong>-${formatCurrency(order.extraDiscount)}</strong></p>` : ''}
       </div>
       <div class="total">TOTAL: ${formatCurrency(order.total)}</div>
 

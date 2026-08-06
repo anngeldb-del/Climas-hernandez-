@@ -41,6 +41,15 @@
 .btn--icon { padding: var(--space-2); width: 36px; height: 36px; }
 .btn--full { width: 100%; }
 
+/* Touch targets: 36px icon buttons are below the 44px minimum recommended
+   for reliable tapping. Only bump them up on touch-sized viewports so
+   dense desktop toolbars don't get any bigger than they need to be. */
+@media (max-width: 720px) {
+  .btn--icon { width: var(--tap-target-min); height: var(--tap-target-min); }
+  .btn:not(.btn--icon) { min-height: var(--tap-target-min); }
+  .btn--sm:not(.btn--icon) { min-height: 38px; }
+}
+
 /* ---- Card ---------------------------------------------------------------- */
 .card {
   background: var(--color-surface);
@@ -171,7 +180,9 @@ table.table tbody tr[data-clickable] { cursor: pointer; }
 .modal-backdrop {
   position: fixed; inset: 0; background: rgba(8, 12, 20, 0.55);
   display: flex; align-items: center; justify-content: center;
-  z-index: var(--z-modal); padding: var(--space-4);
+  z-index: var(--z-modal);
+  padding: calc(var(--space-4) + var(--safe-top)) calc(var(--space-4) + var(--safe-right))
+           calc(var(--space-4) + var(--safe-bottom)) calc(var(--space-4) + var(--safe-left));
   animation: fade-in var(--transition-base);
 }
 .modal {
@@ -180,12 +191,61 @@ table.table tbody tr[data-clickable] { cursor: pointer; }
   max-height: 90vh; display: flex; flex-direction: column;
   animation: modal-in var(--transition-base);
 }
-.modal__header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-5); border-bottom: 1px solid var(--color-border); }
+.modal__header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-5); border-bottom: 1px solid var(--color-border); gap: var(--space-3); }
+.modal__header h3 { font-size: var(--font-size-lg); }
 .modal__body { padding: var(--space-5); overflow-y: auto; }
 .modal__footer { display: flex; justify-content: flex-end; gap: var(--space-2); padding: var(--space-4) var(--space-5); border-top: 1px solid var(--color-border); }
 
+/* Large / detail modals (e.g. the agenda day view): near-fullscreen on
+   phones instead of a small centered box, per the "occupy practically the
+   whole screen on phones" requirement. On tablet/desktop it's just a
+   bigger, readable dialog with generous type — see .modal--sheet__* below. */
+.modal--sheet .modal__header h3 { font-size: var(--font-size-xl); text-transform: capitalize; }
+@media (max-width: 720px) {
+  .modal-backdrop:has(.modal--sheet) { padding: 0; align-items: stretch; }
+  .modal--sheet {
+    max-width: none; width: 100vw; height: 100dvh; max-height: 100dvh;
+    border-radius: 0;
+    padding-top: var(--safe-top); padding-bottom: var(--safe-bottom);
+    padding-left: var(--safe-left); padding-right: var(--safe-right);
+  }
+}
+
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes modal-in { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+/* ---- Agenda: day-view appointment cards --------------------------------------
+   Large-type, card-separated event detail used by the agenda's day modal
+   (opened by tapping a day with events). Replaces the old cramped one-line
+   list — every field gets its own row with a clear label, and action
+   buttons are big enough to tap reliably on a phone. */
+.appt-card {
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.appt-card__top { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-2); }
+.appt-card__time { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: var(--font-size-md); margin-left: auto; }
+.appt-card__title { font-size: var(--font-size-xl); margin: 0 0 var(--space-3); }
+.appt-card__fields { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-4); }
+.appt-field {
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--color-surface); border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+}
+.appt-field__label { font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); font-weight: 600; }
+.appt-field__value { font-size: var(--font-size-lg); word-break: break-word; }
+.appt-card__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.appt-card__actions .btn { flex: 1 1 auto; }
+.appt-card__actions [data-danger] { border-color: var(--color-danger); color: var(--color-danger); }
+
+@media (max-width: 720px) {
+  .appt-card__title { font-size: var(--font-size-2xl); }
+  .appt-field__value { font-size: var(--font-size-xl); }
+  .appt-card__actions .btn { flex: 1 1 100%; }
+}
 
 /* ---- Toast ------------------------------------------------------------------ */
 .toast-region {

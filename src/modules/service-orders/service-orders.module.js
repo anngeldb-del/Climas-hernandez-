@@ -14,7 +14,7 @@
  */
 
 import { mountOrdersList } from './service-orders.list.js';
-import { mountNewOrderForm } from './service-orders.form.js';
+import { mountNewOrderForm, mountEditOrderForm } from './service-orders.form.js';
 import { mountOrderDetail } from './service-orders.detail.js';
 import { createUnsubTracker } from '../../core/utils.js';
 
@@ -26,6 +26,7 @@ async function mount(root, ctx) {
   signaturePads = [];
   const param = ctx.params?.[0];
   if (param === 'new') await mountNewOrderForm(root);
+  else if (param && ctx.params?.[1] === 'edit') await mountEditOrderForm(root, param);
   else if (param) await mountOrderDetail(root, param, { onSignaturePad: (pad) => signaturePads.push(pad) });
   else mountOrdersList(root, unsubTracker);
 }

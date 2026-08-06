@@ -114,24 +114,6 @@ export const DEFAULT_SERVICE_CATALOG = [
   { name: 'Servicio personalizado', category: 'otro', defaultPrice: 0 }
 ];
 
-/** Inventory categories used by filters, forms and low-stock alerts. */
-export const INVENTORY_CATEGORIES = Object.freeze([
-  'refaccion', 'compresor', 'condensador', 'evaporador', 'filtro',
-  'gas_refrigerante', 'aceite', 'herramienta', 'otro'
-]);
-
-export const INVENTORY_CATEGORY_LABELS = Object.freeze({
-  refaccion: 'Refacción',
-  compresor: 'Compresor',
-  condensador: 'Condensador',
-  evaporador: 'Evaporador',
-  filtro: 'Filtro',
-  gas_refrigerante: 'Gas refrigerante',
-  aceite: 'Aceite',
-  herramienta: 'Herramienta',
-  otro: 'Otro'
-});
-
 export const PAYMENT_METHODS = ['Efectivo', 'Tarjeta', 'Transferencia', 'Cheque', 'Otro'];
 
 export const WARRANTY_TYPES = ['Refacción', 'Mano de obra', 'Servicio completo'];

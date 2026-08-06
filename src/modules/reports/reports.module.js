@@ -8,11 +8,10 @@
  */
 
 import { getAll } from '../../core/db.service.js';
-import { COLLECTIONS, INVENTORY_CATEGORY_LABELS } from '../../config/constants.js';
+import { COLLECTIONS } from '../../config/constants.js';
 import { renderTable } from '../../components/ui/table.js';
 import { exportCSV, exportExcel, exportPDF } from '../../core/export.service.js';
 import { formatCurrency, formatDate, toDate } from '../../core/utils.js';
-import { isLowStock } from '../inventory/inventory.service.js';
 
 let container = null;
 let currentRows = [];
@@ -23,8 +22,7 @@ let currentTitle = 'Reporte';
 const REPORT_TYPES = [
   { value: 'income', label: 'Ingresos por período' },
   { value: 'orders', label: 'Órdenes de servicio' },
-  { value: 'technician', label: 'Órdenes por técnico' },
-  { value: 'inventory', label: 'Inventario' }
+  { value: 'technician', label: 'Órdenes por técnico' }
 ];
 
 function defaultRange() {
@@ -68,19 +66,6 @@ async function runReport(type, { start, end }) {
     currentFilename = 'ordenes';
     renderReportTable(currentRows, currentHeaders, `${orders.length} órdenes · Total facturado: ${formatCurrency(orders.reduce((s, o) => s + (o.total || 0), 0))}`);
     return;
-  }
-
-  if (type === 'inventory') {
-    const items = await getAll(COLLECTIONS.INVENTORY);
-    currentHeaders = ['Nombre', 'Categoría', 'Existencias', 'Mínimo', 'Costo', 'Estado'];
-    currentRows = items.map((i) => ({
-      Nombre: i.name, Categoría: INVENTORY_CATEGORY_LABELS[i.category] || i.category,
-      Existencias: i.stock, Mínimo: i.minStock, Costo: i.cost || 0,
-      Estado: isLowStock(i) ? 'Stock bajo' : 'OK'
-    }));
-    currentTitle = 'Inventario actual';
-    currentFilename = 'inventario';
-    renderReportTable(currentRows, currentHeaders, `${items.length} artículos · Valor total: ${formatCurrency(items.reduce((s, i) => s + (i.stock || 0) * (i.cost || 0), 0))}`);
   }
 }
 

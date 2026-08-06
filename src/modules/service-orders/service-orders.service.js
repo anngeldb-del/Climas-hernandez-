@@ -44,6 +44,7 @@ export async function createOrder(data) {
     discountType: data.discountType || 'percent',
     discountValue: data.discountValue || 0,
     discount: data.discount || 0,
+    extraDiscount: data.extraDiscount || 0,
     taxEnabled: data.taxEnabled || false,
     taxRate: data.taxRate ?? 0,
     tax: data.tax || 0,

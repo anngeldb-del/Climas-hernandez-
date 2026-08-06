@@ -61,10 +61,11 @@ export async function mountOrderDetail(container, orderId, { onSignaturePad }) {
         <button class="btn btn--icon btn--ghost" id="back">${icon('chevronRight', { className: 'rotate-180' })}</button>
         <div>
           <h1 class="mb-0">${escapeHtml(order.folioLabel)}</h1>
-          <p class="mb-0 text-sm">${escapeHtml(order.clientName || '')} · ${escapeHtml(order.vehicleLabel || '')} · <span class="badge badge--${meta.color}">${meta.label}</span></p>
+          <p class="mb-0 text-sm">${escapeHtml(order.clientName || '')} · ${escapeHtml(order.vehicleLabel || '')}${order.unitNumber ? ` · Unidad ${escapeHtml(order.unitNumber)}` : ''} · <span class="badge badge--${meta.color}">${meta.label}</span></p>
         </div>
       </div>
       <div class="flex gap-2">
+        <button class="btn btn--outline" id="edit-btn">${icon('edit', { size: 16 })} Editar</button>
         <button class="btn btn--outline" id="print-btn">${icon('order', { size: 16 })} Imprimir</button>
         <button class="btn btn--danger" id="delete-order">${icon('trash', { size: 16 })} Eliminar</button>
       </div>
@@ -105,6 +106,7 @@ export async function mountOrderDetail(container, orderId, { onSignaturePad }) {
             ${order.discount > 0 ? `<p>Descuento: <strong>-${formatCurrency(order.discount)}</strong></p>` : ''}
             ${order.taxEnabled ? `<p>IVA (${order.taxRate ?? 0}%): <strong>${formatCurrency(order.tax)}</strong></p>` : ''}
             ${order.isrEnabled ? `<p>Retención ISR (${order.isrRate ?? 0}%): <strong>-${formatCurrency(order.isr)}</strong></p>` : ''}
+            ${order.extraDiscount > 0 ? `<p>Descuento adicional: <strong>-${formatCurrency(order.extraDiscount)}</strong></p>` : ''}
             <p style="font-size:1.25rem"><strong>Total: ${formatCurrency(order.total)}</strong></p>
           </div>
           <p class="text-right text-muted">Pagado: ${formatCurrency(order.amountPaid)} · Saldo: ${formatCurrency(Math.max(0, order.total - (order.amountPaid || 0)))}</p>
@@ -135,6 +137,7 @@ export async function mountOrderDetail(container, orderId, { onSignaturePad }) {
   `;
 
   container.querySelector('#back').addEventListener('click', () => navigate('service-orders'));
+  container.querySelector('#edit-btn').addEventListener('click', () => navigate('service-orders', `${order.id}/edit`));
   container.querySelector('#print-btn').addEventListener('click', () => printOrderTicket(order));
   container.querySelector('#delete-order').addEventListener('click', async () => {
     const confirmed = await confirmDialog({

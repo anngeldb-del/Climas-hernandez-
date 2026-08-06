@@ -37,6 +37,7 @@ function vehicleFormFields(vehicle = {}) {
     { name: 'color', label: 'Color', value: vehicle.color },
     { name: 'plates', label: 'Placas', value: vehicle.plates },
     { name: 'vin', label: 'VIN / Número de serie', value: vehicle.vin },
+    { name: 'unitNumber', label: 'Número de unidad', value: vehicle.unitNumber, placeholder: 'Ej. U-15, Unidad 08, CAM-22' },
     { name: 'mileage', label: 'Kilometraje', type: 'number', value: vehicle.mileage },
     { name: 'fuelType', label: 'Combustible', type: 'select', value: vehicle.fuelType, options: FUEL_TYPES.map((f) => ({ value: f, label: f })) },
     { name: 'notes', label: 'Observaciones', type: 'textarea', value: vehicle.notes, fullWidth: true }
@@ -88,7 +89,7 @@ function renderGrouped(rows) {
         ${group.vehicles.map((v) => `
           <div class="card" data-vehicle="${v.id}" style="cursor:pointer">
             <div class="flex items-center gap-2">${icon('vehicle')} <strong>${escapeHtml(vehicleLabel(v))}</strong></div>
-            <p class="text-sm mb-0">Placas: ${escapeHtml(v.plates) || '—'} · Color: ${escapeHtml(v.color) || '—'}</p>
+            <p class="text-sm mb-0">Placas: ${escapeHtml(v.plates) || '—'} · Color: ${escapeHtml(v.color) || '—'}${v.unitNumber ? ` · Unidad: ${escapeHtml(v.unitNumber)}` : ''}</p>
           </div>
         `).join('')}
       </div>
@@ -180,6 +181,7 @@ async function mountDetail(vehicleId) {
         <p class="text-sm"><strong>Color:</strong> ${escapeHtml(vehicle.color || '—')}</p>
         <p class="text-sm"><strong>Placas:</strong> ${escapeHtml(vehicle.plates || '—')}</p>
         <p class="text-sm"><strong>VIN:</strong> ${escapeHtml(vehicle.vin || '—')}</p>
+        <p class="text-sm"><strong>Número de unidad:</strong> ${escapeHtml(vehicle.unitNumber || '—')}</p>
         <p class="text-sm"><strong>Kilometraje:</strong> ${vehicle.mileage ? `${Number(vehicle.mileage) || 0} km` : '—'}</p>
         <p class="text-sm"><strong>Combustible:</strong> ${escapeHtml(vehicle.fuelType || '—')}</p>
         ${vehicle.notes ? `<p class="text-sm"><strong>Observaciones:</strong> ${escapeHtml(vehicle.notes)}</p>` : ''}

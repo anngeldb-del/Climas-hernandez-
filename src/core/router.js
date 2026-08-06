@@ -22,7 +22,6 @@ const routes = {
   vehicles: () => import('../modules/vehicles/vehicles.module.js'),
   'service-orders': () => import('../modules/service-orders/service-orders.module.js'),
   catalog: () => import('../modules/catalog/catalog.module.js'),
-  inventory: () => import('../modules/inventory/inventory.module.js'),
   quotes: () => import('../modules/quotes/quotes.module.js'),
   payments: () => import('../modules/payments/payments.module.js'),
   warranties: () => import('../modules/warranties/warranties.module.js'),

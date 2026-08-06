@@ -8,7 +8,7 @@
  * the list or detail screens.
  */
 
-import { createOrder } from './service-orders.service.js';
+import { createOrder, getOrder, updateOrder } from './service-orders.service.js';
 import { getAll } from '../../core/db.service.js';
 import { where } from '../../core/firebase.init.js';
 import { createClient } from '../clients/clients.service.js';
@@ -49,7 +49,8 @@ function openQuickVehicleModal(clientId, onCreated) {
     { name: 'brand', label: 'Marca', required: true },
     { name: 'model', label: 'Modelo', required: true },
     { name: 'plates', label: 'Placas' },
-    { name: 'color', label: 'Color' }
+    { name: 'color', label: 'Color' },
+    { name: 'unitNumber', label: 'Número de unidad', placeholder: 'Ej. U-15, Unidad 08, CAM-22' }
   ]);
   const footer = document.createElement('div');
   footer.className = 'flex gap-2';
@@ -218,6 +219,7 @@ export async function mountNewOrderForm(container) {
         vehicle: selectedVehicle,
         vehiclePlates: selectedVehicle.plates,
         vehicleColor: selectedVehicle.color,
+        unitNumber: selectedVehicle.unitNumber || '',
         mileage: Number(container.querySelector('#mileage').value) || selectedVehicle.mileage || null,
         technicianId: techSelect.value || null,
         technicianName: technicians.find((t) => t.id === techSelect.value)?.displayName || null,
@@ -244,3 +246,165 @@ export async function mountNewOrderForm(container) {
     }
   });
 }
+
+/**
+ * The #/service-orders/{id}/edit screen. Client and vehicle stay fixed
+ * (an order is always tied to the vehicle it was opened for — changing
+ * that belongs to creating a new order), but everything else — parts,
+ * labor, technician, dates, notes, taxes and the discount — is editable,
+ * including the new "descuento adicional" field: a second, independent
+ * discount applied directly to the already-taxed total (e.g. a manual
+ * markdown negotiated at pickup), on top of the pre-tax discount already
+ * offered by the tax section.
+ */
+export async function mountEditOrderForm(container, orderId) {
+  container.innerHTML = '<div class="skeleton" style="height:480px"></div>';
+  const order = await getOrder(orderId);
+  if (!order) { container.innerHTML = '<div class="empty-state">Orden no encontrada.</div>'; return; }
+
+  const technicians = await getAll(COLLECTIONS.USERS, where('role', '==', ROLES.TECNICO));
+
+  container.innerHTML = `
+    <div class="page-header">
+      <div class="flex items-center gap-3">
+        <button class="btn btn--icon btn--ghost" id="back">${icon('chevronRight', { className: 'rotate-180' })}</button>
+        <h1 class="mb-0">Editar orden ${escapeHtmlLite(order.folioLabel)}</h1>
+      </div>
+    </div>
+    <form id="order-edit-form" class="card">
+      <div class="grid grid--form">
+        <div class="field"><label class="field__label">Cliente</label><input class="input" value="${escapeHtmlLite(order.clientName || '')}" disabled /></div>
+        <div class="field"><label class="field__label">Vehículo</label><input class="input" value="${escapeHtmlLite(order.vehicleLabel || '')}${order.unitNumber ? ' · Unidad ' + escapeHtmlLite(order.unitNumber) : ''}" disabled /></div>
+      </div>
+
+      <div class="grid grid--form">
+        <div class="field"><label class="field__label" for="mileage">Kilometraje actual</label><input class="input" type="number" id="mileage" value="${order.mileage ?? ''}" /></div>
+      </div>
+      <div class="field"><label class="field__label" for="serviceRequested">Diagnóstico / servicio solicitado</label><textarea class="textarea" id="serviceRequested">${escapeHtmlLite(order.serviceRequested || '')}</textarea></div>
+
+      <h3>Refacciones</h3>
+      <div id="parts-lines"></div>
+
+      <div class="grid grid--form">
+        <div class="field"><label class="field__label" for="laborCost">Mano de obra</label><input class="input" type="number" min="0" step="0.01" id="laborCost" value="${order.laborCost || 0}" /></div>
+      </div>
+
+      <div id="tax-section"></div>
+
+      <div class="grid grid--form" style="margin-top:var(--space-3)">
+        <div class="field">
+          <label class="field__label" for="extraDiscount">Descuento adicional (monto fijo)</label>
+          <input class="input" type="number" min="0" step="0.01" id="extraDiscount" value="${order.extraDiscount || 0}" />
+          <span class="field__hint">Se aplica directamente sobre el total ya calculado (después de IVA/ISR) — úsalo para una rebaja adicional acordada con el cliente.</span>
+        </div>
+      </div>
+      <div class="text-right section" id="final-total-preview"></div>
+
+      <details class="collapsible">
+        <summary>Más detalles (opcional)</summary>
+        <div class="collapsible__body grid grid--form">
+          <div class="field"><label class="field__label" for="technician">Técnico responsable</label><select class="select" id="technician"><option value="">Sin asignar</option></select></div>
+          <div class="field"><label class="field__label" for="estimatedTime">Tiempo estimado</label><input class="input" id="estimatedTime" value="${escapeHtmlLite(order.estimatedTime || '')}" placeholder="Ej. 2 horas" /></div>
+          <div class="field"><label class="field__label" for="estimatedDelivery">Fecha de entrega estimada</label><input class="input" type="date" id="estimatedDelivery" value="${order.estimatedDelivery || ''}" /></div>
+          <div class="field"><label class="field__label" for="diagnosis">Diagnóstico técnico</label><textarea class="textarea" id="diagnosis">${escapeHtmlLite(order.diagnosis || '')}</textarea></div>
+          <div class="field"><label class="field__label" for="serviceDone">Servicio realizado</label><textarea class="textarea" id="serviceDone">${escapeHtmlLite(order.serviceDone || '')}</textarea></div>
+          <div class="field"><label class="field__label" for="notes">Observaciones</label><textarea class="textarea" id="notes">${escapeHtmlLite(order.notes || '')}</textarea></div>
+        </div>
+      </details>
+
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn btn--outline" id="cancel">Cancelar</button>
+        <button type="submit" class="btn btn--primary">Guardar cambios</button>
+      </div>
+    </form>
+  `;
+
+  container.querySelector('#back').addEventListener('click', () => navigate('service-orders', orderId));
+  container.querySelector('#cancel').addEventListener('click', () => navigate('service-orders', orderId));
+
+  const techSelect = container.querySelector('#technician');
+  techSelect.innerHTML += technicians.map((t) => `<option value="${t.id}" ${t.id === order.technicianId ? 'selected' : ''}>${t.displayName}</option>`).join('');
+
+  const linesEl = container.querySelector('#parts-lines');
+  const laborInput = container.querySelector('#laborCost');
+  const extraDiscountInput = container.querySelector('#extraDiscount');
+  const lineItems = createLineItems(linesEl, { rows: order.partsItems || [], onChange: () => refreshFinalTotal() });
+  laborInput.addEventListener('input', () => refreshFinalTotal());
+  extraDiscountInput.addEventListener('input', () => refreshFinalTotal());
+
+  const taxSection = createTaxSection(container.querySelector('#tax-section'), {
+    getItems: () => lineItems.getItems(),
+    getLaborCost: () => Number(laborInput.value) || 0,
+    defaults: {
+      ivaEnabled: order.taxEnabled, ivaRate: order.taxRate ?? 16,
+      isrEnabled: order.isrEnabled, isrRate: order.isrRate ?? 1.25,
+      discountEnabled: order.discountEnabled, discountType: order.discountType || 'percent', discountValue: order.discountValue || 0
+    },
+    onChange: () => refreshFinalTotal()
+  });
+
+  function computeFinalTotals() {
+    const values = taxSection.getValues();
+    const baseTotals = calcularTotales(values);
+    const extraDiscount = Math.max(0, Number(extraDiscountInput.value) || 0);
+    const finalTotal = Math.max(0, Math.round((baseTotals.total - extraDiscount) * 100) / 100);
+    return { values, baseTotals, extraDiscount, finalTotal };
+  }
+
+  function refreshFinalTotal() {
+    const { extraDiscount, baseTotals, finalTotal } = computeFinalTotals();
+    const preview = container.querySelector('#final-total-preview');
+    if (!extraDiscount) { preview.innerHTML = ''; return; }
+    preview.innerHTML = `
+      <p>Total antes de descuento adicional: <strong>${formatCurrencyLite(baseTotals.total)}</strong></p>
+      <p>Descuento adicional: <strong>-${formatCurrencyLite(extraDiscount)}</strong></p>
+      <p style="font-size:1.25rem">Total final: <strong>${formatCurrencyLite(finalTotal)}</strong></p>
+    `;
+  }
+  refreshFinalTotal();
+
+  container.querySelector('#order-edit-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const submitBtn = event.target.querySelector('button[type=submit]');
+    submitBtn.disabled = true;
+    try {
+      const { values, baseTotals, extraDiscount, finalTotal } = computeFinalTotals();
+      await updateOrder(orderId, {
+        mileage: Number(container.querySelector('#mileage').value) || null,
+        technicianId: techSelect.value || null,
+        technicianName: technicians.find((t) => t.id === techSelect.value)?.displayName || null,
+        estimatedTime: container.querySelector('#estimatedTime').value,
+        estimatedDelivery: container.querySelector('#estimatedDelivery').value || null,
+        diagnosis: container.querySelector('#diagnosis').value,
+        serviceDone: container.querySelector('#serviceDone').value,
+        notes: container.querySelector('#notes').value,
+        serviceRequested: container.querySelector('#serviceRequested').value,
+        partsItems: values.items,
+        laborCost: values.laborCost,
+        taxEnabled: values.taxEnabled, taxRate: values.taxRate,
+        isrEnabled: values.isrEnabled, isrRate: values.isrRate,
+        discountEnabled: values.discountEnabled, discountType: values.discountType, discountValue: values.discountValue,
+        subtotal: baseTotals.subtotal, taxableBase: baseTotals.taxableBase, tax: baseTotals.tax, isr: baseTotals.isr,
+        discount: baseTotals.discount,
+        extraDiscount,
+        total: finalTotal
+      }, { note: 'Orden editada', extraDiscount });
+      showToast('Orden actualizada', 'success');
+      navigate('service-orders', orderId);
+    } catch (error) {
+      console.error('[service-orders] update failed', error);
+      showToast('No se pudo actualizar la orden', 'danger');
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+}
+
+// Small local helpers so this file doesn't need to import formatCurrency/escapeHtml
+// just for the two read-only lines above (kept name-distinct from core/utils.js's
+// versions in case this file is ever bundled differently).
+function escapeHtmlLite(text) {
+  return String(text ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+const currencyFormatterLite = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
+function formatCurrencyLite(n) { return currencyFormatterLite.format(Number(n) || 0); }

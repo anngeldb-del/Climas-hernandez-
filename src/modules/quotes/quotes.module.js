@@ -156,6 +156,7 @@ async function mountNewQuote() {
         clientEmail: selectedClient.email || '',
         vehicleId: selectedVehicle?.id || null,
         vehicleLabel: selectedVehicle ? vehicleLabel(selectedVehicle) : '',
+        unitNumber: selectedVehicle?.unitNumber || '',
         items: values.items,
         taxEnabled: values.taxEnabled, taxRate: values.taxRate,
         isrEnabled: values.isrEnabled, isrRate: values.isrRate,
@@ -228,7 +229,7 @@ async function mountDetail(quoteId) {
     <div class="page-header">
       <div class="flex items-center gap-3">
         <button class="btn btn--icon btn--ghost" id="back">${icon('chevronRight', { className: 'rotate-180' })}</button>
-        <div><h1 class="mb-0">${escapeHtml(quote.folioLabel)}</h1><p class="mb-0 text-sm">${escapeHtml(quote.clientName || '')} · ${escapeHtml(quote.vehicleLabel || 'Sin vehículo')}</p></div>
+        <div><h1 class="mb-0">${escapeHtml(quote.folioLabel)}</h1><p class="mb-0 text-sm">${escapeHtml(quote.clientName || '')} · ${escapeHtml(quote.vehicleLabel || 'Sin vehículo')}${quote.unitNumber ? ` · Unidad ${escapeHtml(quote.unitNumber)}` : ''}</p></div>
       </div>
       <div class="flex gap-2">
         <button class="btn btn--outline" id="send-whatsapp">${icon('whatsapp', { size: 16 })} Enviar por WhatsApp</button>

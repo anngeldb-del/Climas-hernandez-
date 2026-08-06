@@ -3,9 +3,9 @@
  * -----------------------------------------------------------------------
  * Global command-palette-style search (Ctrl/Cmd+K or the topbar button).
  * Not a routed module — it's a modal any screen can summon. Indexes
- * clients, vehicles, service orders, inventory and the catalog into one
- * flat, in-memory list refreshed each time it opens (see dashboard
- * service's scalability note: fine for this business's data volume).
+ * clients, vehicles, service orders and the catalog into one flat,
+ * in-memory list refreshed each time it opens (see dashboard service's
+ * scalability note: fine for this business's data volume).
  */
 
 import { getAll } from '../../core/db.service.js';
@@ -16,9 +16,9 @@ import { navigate } from '../../core/router.js';
 import { normalizeText, escapeHtml } from '../../core/utils.js';
 
 async function buildIndex() {
-  const [clients, vehicles, orders, inventory, catalog] = await Promise.all([
+  const [clients, vehicles, orders, catalog] = await Promise.all([
     getAll(COLLECTIONS.CLIENTS), getAll(COLLECTIONS.VEHICLES), getAll(COLLECTIONS.SERVICE_ORDERS),
-    getAll(COLLECTIONS.INVENTORY), getAll(COLLECTIONS.CATALOG)
+    getAll(COLLECTIONS.CATALOG)
   ]);
 
   const entries = [];
@@ -28,15 +28,11 @@ async function buildIndex() {
   });
   for (const v of vehicles) entries.push({
     type: 'vehicles', icon: 'vehicle', title: `${v.brand || ''} ${v.model || ''}`.trim(), subtitle: v.plates || v.vin || 'Vehículo',
-    search: `${v.brand} ${v.model} ${v.plates} ${v.vin}`, route: ['vehicles', v.id]
+    search: `${v.brand} ${v.model} ${v.plates} ${v.vin} ${v.unitNumber || ''}`, route: ['vehicles', v.id]
   });
   for (const o of orders) entries.push({
     type: 'service-orders', icon: 'order', title: o.folioLabel, subtitle: `${o.clientName || ''} · ${ORDER_STATUS_META[o.status]?.label || o.status}`,
-    search: `${o.folioLabel} ${o.clientName} ${o.vehiclePlates} ${o.vehicleLabel}`, route: ['service-orders', o.id]
-  });
-  for (const i of inventory) entries.push({
-    type: 'inventory', icon: 'inventory', title: i.name, subtitle: i.sku || 'Inventario',
-    search: `${i.name} ${i.sku || ''}`, route: ['inventory']
+    search: `${o.folioLabel} ${o.clientName} ${o.vehiclePlates} ${o.vehicleLabel} ${o.unitNumber || ''}`, route: ['service-orders', o.id]
   });
   for (const s of catalog) entries.push({
     type: 'catalog', icon: 'catalog', title: s.name, subtitle: 'Servicio del catálogo',

@@ -79,6 +79,20 @@
   --z-sidebar: 90;
   --z-modal: 1000;
   --z-toast: 1100;
+
+  /*
+   * Safe-area insets (iPhone notch / Dynamic Island / home indicator).
+   * Falls back to 0px on devices without a cutout so these are safe to use
+   * unconditionally. Requires <meta name="viewport" content="viewport-fit=cover">
+   * in index.html (already set) — without it env() always resolves to 0.
+   */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  /* Minimum touch target per WCAG/Apple/Material guidance. */
+  --tap-target-min: 44px;
 }
 
 html[data-theme='dark'] {

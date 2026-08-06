@@ -40,7 +40,6 @@ const NAV_SECTIONS = [
       { key: 'quotes', label: 'Cotizaciones', icon: 'quote' },
       { key: 'payments', label: 'Pagos', icon: 'payments' },
       { key: 'catalog', label: 'Catálogo', icon: 'catalog' },
-      { key: 'inventory', label: 'Inventario', icon: 'inventory' },
       { key: 'reports', label: 'Reportes', icon: 'reports' }
     ]
   },

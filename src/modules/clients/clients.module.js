@@ -158,6 +158,7 @@ function vehicleFormFields() {
     { name: 'color', label: 'Color' },
     { name: 'plates', label: 'Placas' },
     { name: 'vin', label: 'VIN / Número de serie' },
+    { name: 'unitNumber', label: 'Número de unidad', placeholder: 'Ej. U-15, Unidad 08, CAM-22' },
     { name: 'mileage', label: 'Kilometraje', type: 'number' },
     { name: 'fuelType', label: 'Combustible', type: 'select', options: FUEL_TYPES.map((f) => ({ value: f, label: f })) },
     { name: 'notes', label: 'Observaciones', type: 'textarea', fullWidth: true }
@@ -204,7 +205,7 @@ function renderVehiclesTab(clientId) {
     grid.innerHTML = vehicles.map((v) => `
       <div class="card" data-clickable data-id="${v.id}" style="cursor:pointer">
         <div class="flex items-center gap-2">${icon('vehicle')} <strong>${escapeHtml(vehicleLabel(v))}</strong></div>
-        <p class="text-sm">Placas: ${escapeHtml(v.plates || '—')} · Color: ${escapeHtml(v.color || '—')}</p>
+        <p class="text-sm">Placas: ${escapeHtml(v.plates || '—')} · Color: ${escapeHtml(v.color || '—')}${v.unitNumber ? ` · Unidad: ${escapeHtml(v.unitNumber)}` : ''}</p>
       </div>
     `).join('');
     grid.querySelectorAll('[data-clickable]').forEach((card) => {

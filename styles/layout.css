@@ -9,11 +9,15 @@
 #app-shell {
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
-  grid-template-rows: var(--topbar-height) 1fr;
+  /* auto (not a fixed height) so the topbar row can grow to fit the
+     safe-area inset padding added below without clipping its contents
+     on notched/Dynamic-Island phones. */
+  grid-template-rows: auto 1fr;
   grid-template-areas:
     'sidebar topbar'
     'sidebar main';
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 #app-shell.sidebar-collapsed {
@@ -25,7 +29,15 @@
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  padding: 0 var(--space-5);
+  /* Safe-area padding keeps every control clear of the iPhone notch /
+     Dynamic Island / status bar. The bar grows taller instead of its
+     content sliding under the cutout — height comes from padding, not a
+     fixed var(--topbar-height), so it works whether the safe-area inset
+     is 0 (Android/desktop) or 40-59px (iPhone Pro/Pro Max, landscape). */
+  padding: var(--safe-top) var(--space-5) 0;
+  min-height: calc(var(--topbar-height) + var(--safe-top));
+  padding-left: calc(var(--space-5) + var(--safe-left));
+  padding-right: calc(var(--space-5) + var(--safe-right));
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   position: sticky;
@@ -69,7 +81,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
-  height: var(--topbar-height);
+  min-height: var(--topbar-height);
   border-bottom: 1px solid var(--color-border);
   white-space: nowrap;
 }
@@ -91,6 +103,8 @@
 .main {
   grid-area: main;
   padding: var(--space-5);
+  padding-bottom: calc(var(--space-5) + var(--safe-bottom));
+  padding-right: calc(var(--space-5) + var(--safe-right));
   max-width: 1440px;
   width: 100%;
   margin: 0 auto;
@@ -122,11 +136,13 @@
 /* ---- Auth screen ------------------------------------------------------ */
 .auth-screen {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(160deg, var(--color-brand-intense) 0%, var(--color-brand-fresh) 100%);
-  padding: var(--space-4);
+  padding: calc(var(--space-4) + var(--safe-top)) calc(var(--space-4) + var(--safe-right))
+           calc(var(--space-4) + var(--safe-bottom)) calc(var(--space-4) + var(--safe-left));
 }
 
 .auth-card {
@@ -172,6 +188,11 @@
     transform: translateX(-100%);
     transition: transform 0.2s ease;
     box-shadow: 2px 0 16px rgba(0, 0, 0, 0.25);
+    /* Fixed + inset:0-ish means this drawer sits directly under the notch
+       and home indicator too — pad it the same way as the topbar. */
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
+    padding-left: var(--safe-left);
   }
   .sidebar.sidebar--open { transform: translateX(0); }
 
@@ -201,7 +222,13 @@
 
   #btn-toggle-sidebar { display: inline-flex; }
 
-  .main { padding: var(--space-3); min-width: 0; }
+  .main {
+    padding: var(--space-3);
+    padding-bottom: calc(var(--space-3) + var(--safe-bottom));
+    padding-left: calc(var(--space-3) + var(--safe-left));
+    padding-right: calc(var(--space-3) + var(--safe-right));
+    min-width: 0;
+  }
 
   .topbar__search-label { display: none; }
   .topbar__search { flex: 0 0 auto; padding: var(--space-2); }

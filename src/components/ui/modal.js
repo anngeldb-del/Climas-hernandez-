@@ -10,14 +10,17 @@ import { icon } from './icons.js';
 import { escapeHtml } from '../../core/utils.js';
 
 /**
- * @param {{title: string, body: HTMLElement|string, footer?: HTMLElement|string, maxWidth?: string, onClose?: Function}} options
+ * @param {{title: string, body: HTMLElement|string, footer?: HTMLElement|string, maxWidth?: string, sheet?: boolean, onClose?: Function}} options
+ * @param {boolean} [options.sheet] Use for content-heavy detail views (e.g. the agenda
+ *   day view): near-fullscreen on phones with large type, instead of the small
+ *   centered dialog used for quick forms/confirmations.
  */
-export function openModal({ title, body, footer, maxWidth = '560px', onClose }) {
+export function openModal({ title, body, footer, maxWidth = '560px', sheet = false, onClose }) {
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
 
   const modal = document.createElement('div');
-  modal.className = 'modal';
+  modal.className = sheet ? 'modal modal--sheet' : 'modal';
   modal.style.setProperty('--modal-max-width', maxWidth);
   modal.setAttribute('role', 'dialog');
   modal.setAttribute('aria-modal', 'true');
