@@ -328,8 +328,18 @@ export async function mountEditOrderForm(container, orderId) {
   const linesEl = container.querySelector('#parts-lines');
   const laborInput = container.querySelector('#laborCost');
   const extraDiscountInput = container.querySelector('#extraDiscount');
-  const lineItems = createLineItems(linesEl, { rows: order.partsItems || [], onChange: () => refreshFinalTotal() });
-  laborInput.addEventListener('input', () => refreshFinalTotal());
+
+  // Holds the latest {inputs + totals} object the tax-section reports via
+  // onChange — read from here instead of calling taxSection.getValues()
+  // inside that same onChange callback. createTaxSection() fires an
+  // initial refresh() synchronously, *while still being constructed*, so
+  // referencing the `const taxSection` binding from inside onChange at
+  // that moment hits the temporal dead zone (ReferenceError, screen fails
+  // to load). Keeping a plain variable side-steps that entirely.
+  let latestValues = null;
+
+  const lineItems = createLineItems(linesEl, { rows: order.partsItems || [], onChange: () => taxSection.refresh() });
+  laborInput.addEventListener('input', () => taxSection.refresh());
   extraDiscountInput.addEventListener('input', () => refreshFinalTotal());
 
   const taxSection = createTaxSection(container.querySelector('#tax-section'), {
@@ -340,12 +350,12 @@ export async function mountEditOrderForm(container, orderId) {
       isrEnabled: order.isrEnabled, isrRate: order.isrRate ?? 1.25,
       discountEnabled: order.discountEnabled, discountType: order.discountType || 'percent', discountValue: order.discountValue || 0
     },
-    onChange: () => refreshFinalTotal()
+    onChange: (result) => { latestValues = result; refreshFinalTotal(); }
   });
 
   function computeFinalTotals() {
-    const values = taxSection.getValues();
-    const baseTotals = calcularTotales(values);
+    const values = latestValues || taxSection.getValues();
+    const baseTotals = latestValues || calcularTotales(values);
     const extraDiscount = Math.max(0, Number(extraDiscountInput.value) || 0);
     const finalTotal = Math.max(0, Math.round((baseTotals.total - extraDiscount) * 100) / 100);
     return { values, baseTotals, extraDiscount, finalTotal };
