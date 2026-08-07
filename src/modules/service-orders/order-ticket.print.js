@@ -35,6 +35,16 @@ export function printOrderTicket(order) {
   const statusLabel = ORDER_STATUS_META[order.status]?.label || order.status;
 
   const win = window.open('', '_blank', 'width=480,height=720');
+  // win starts as a blank document (no URL of its own — see the
+  // about:blank tab title after opening), so a relative logoHd path has
+  // nothing to resolve against and 404s. new URL(path, location.href)
+  // resolves it against *this* page's real address instead — correctly
+  // rebuilding "https://<host>/<repo-subpath>/assets/logo-hd.png" (not
+  // just location.origin + path, which drops the GitHub Pages repo
+  // subpath entirely). If logoHd is already an absolute URL (a custom
+  // logo uploaded in Configuración, stored as a full Firebase Storage
+  // URL), the same call just returns it unchanged.
+  const logoUrl = new URL(business.logoHd, location.href).href;
   win.document.write(`
     <!DOCTYPE html>
     <html lang="es-MX"><head><meta charset="UTF-8" />
@@ -58,7 +68,7 @@ export function printOrderTicket(order) {
     </style>
     </head><body>
       <div class="header">
-        <img src="${location.origin}/${business.logoHd}" alt="logo" />
+        <img src="${logoUrl}" alt="logo" />
         <div>
           <h2>${business.name}</h2>
           <p>${business.slogan}</p>
