@@ -53,11 +53,7 @@ export async function createOrder(data) {
     isr: data.isr || 0,
     subtotal: data.subtotal || 0,
     total: data.total || 0,
-    amountPaid: 0,
-    photosBefore: [],
-    photosAfter: [],
-    signatureClientUrl: null,
-    signatureTechnicianUrl: null
+    amountPaid: 0
   };
   delete payload.vehicle;
 

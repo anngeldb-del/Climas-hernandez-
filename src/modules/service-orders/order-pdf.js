@@ -37,7 +37,7 @@ async function loadImageAsDataUrl(path) {
  * callers decide what to do with the result (see generateOrderPdf / getOrderPdfFile below).
  * @param {object} order {folioLabel, createdAt, clientName, clientPhone, vehicleLabel,
  *   unitNumber, serviceRequested, partsItems, laborCost, subtotal, discount, taxEnabled,
- *   taxRate, tax, isrEnabled, isrRate, isr, extraDiscount, total, notes, signatureClientUrl}
+ *   taxRate, tax, isrEnabled, isrRate, isr, extraDiscount, total, notes}
  */
 export async function buildOrderPdfDoc(order) {
   await ensureLibs();
@@ -176,20 +176,6 @@ export async function buildOrderPdfDoc(order) {
     const noteLines = doc.splitTextToSize(String(order.notes), 180);
     doc.text(noteLines, marginX, y + 5);
     y += 5 + noteLines.length * 5;
-  }
-
-  if (order.signatureClientUrl) {
-    y += 8;
-    if (y > 230) { doc.addPage(); y = 20; }
-    try {
-      doc.addImage(order.signatureClientUrl, 'PNG', marginX, y, 60, 25);
-      doc.setFontSize(8);
-      doc.setTextColor(120);
-      doc.text('Firma del cliente', marginX, y + 29);
-      doc.setTextColor(0);
-    } catch (error) {
-      console.warn('[order-pdf] signature image failed to embed', error);
-    }
   }
 
   doc.setFontSize(8);

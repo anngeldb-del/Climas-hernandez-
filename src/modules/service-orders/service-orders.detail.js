@@ -1,19 +1,14 @@
 /**
  * service-orders.detail.js
  * -----------------------------------------------------------------------
- * The #/service-orders/{id} screen: status stepper, info/costs, photos,
- * and signature capture. Split out of service-orders.module.js since it
- * was the largest chunk of that file. Signature pads are handed back to
- * the caller via onSignaturePad so service-orders.module.js can still
- * destroy() them from its own unmount() — see the memory-leak fix in
- * signature-pad.js.
+ * The #/service-orders/{id} screen: status stepper, info/costs. Split
+ * out of service-orders.module.js since it was the largest chunk of
+ * that file. (Photo/signature capture used to live here too — removed;
+ * see the "eliminar firmas y fotos" commit.)
  */
 
 import { getOrder, updateOrder, setOrderStatus, deleteOrder } from './service-orders.service.js';
 import { ORDER_STATUS, ORDER_STATUS_META, ORDER_STATUS_FLOW } from '../../config/constants.js';
-import { createPhotoUploader } from '../../components/ui/file-upload.js';
-import { createSignaturePad } from '../../components/ui/signature-pad.js';
-import { canvasToFile, uploadPhoto } from '../../core/storage.service.js';
 import { confirmDialog } from '../../components/ui/modal.js';
 import { showToast } from '../../components/ui/toast.js';
 import { icon } from '../../components/ui/icons.js';
@@ -117,13 +112,13 @@ function renderStepper(container, order, onChanged) {
   });
 }
 
-export async function mountOrderDetail(container, orderId, { onSignaturePad }) {
+export async function mountOrderDetail(container, orderId) {
   container.innerHTML = '<div class="skeleton" style="height:480px"></div>';
   const order = await getOrder(orderId);
   if (!order) { container.innerHTML = '<div class="empty-state">Orden no encontrada.</div>'; return; }
 
   const meta = ORDER_STATUS_META[order.status] || { label: order.status, color: 'neutral' };
-  const rerender = () => mountOrderDetail(container, orderId, { onSignaturePad });
+  const rerender = () => mountOrderDetail(container, orderId);
 
   container.innerHTML = `
     <div class="page-header">
@@ -145,12 +140,6 @@ export async function mountOrderDetail(container, orderId, { onSignaturePad }) {
     </div>
 
     <div class="card section" id="status-stepper"></div>
-
-    <div class="tabs">
-      <div class="tab active" data-tab="info">Información</div>
-      <div class="tab" data-tab="photos">Fotografías</div>
-      <div class="tab" data-tab="signatures">Firmas</div>
-    </div>
 
     <div id="tab-info">
       ${letterheadHtml()}
@@ -185,26 +174,6 @@ export async function mountOrderDetail(container, orderId, { onSignaturePad }) {
           </div>
           <p class="text-right text-muted">Pagado: ${formatCurrency(order.amountPaid)} · Saldo: ${formatCurrency(Math.max(0, order.total - (order.amountPaid || 0)))}</p>
           <button class="btn btn--outline btn--sm" id="go-payments">Registrar pago</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="tab-photos" class="hidden">
-      <div class="grid grid--2">
-        <div class="card" id="photos-before"></div>
-        <div class="card" id="photos-after"></div>
-      </div>
-    </div>
-
-    <div id="tab-signatures" class="hidden">
-      <div class="grid grid--2">
-        <div class="card">
-          <h3>Firma del cliente</h3>
-          ${order.signatureClientUrl ? `<img src="${order.signatureClientUrl}" alt="Firma cliente" style="max-width:100%;border:1px solid var(--color-border);border-radius:8px" />` : `<div id="sig-client-pad"></div><div class="flex gap-2" style="margin-top:8px"><button class="btn btn--outline btn--sm" id="sig-client-clear">Limpiar</button><button class="btn btn--primary btn--sm" id="sig-client-save">Guardar firma</button></div>`}
-        </div>
-        <div class="card">
-          <h3>Firma del técnico</h3>
-          ${order.signatureTechnicianUrl ? `<img src="${order.signatureTechnicianUrl}" alt="Firma técnico" style="max-width:100%;border:1px solid var(--color-border);border-radius:8px" />` : `<div id="sig-tech-pad"></div><div class="flex gap-2" style="margin-top:8px"><button class="btn btn--outline btn--sm" id="sig-tech-clear">Limpiar</button><button class="btn btn--primary btn--sm" id="sig-tech-save">Guardar firma</button></div>`}
         </div>
       </div>
     </div>
@@ -255,45 +224,4 @@ export async function mountOrderDetail(container, orderId, { onSignaturePad }) {
   container.querySelector('#go-payments').addEventListener('click', () => navigate('payments', '', { orderId: order.id }));
 
   renderStepper(container, order, rerender);
-
-  container.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => {
-    container.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t === tab));
-    container.querySelectorAll('[id^="tab-"]').forEach((p) => p.classList.toggle('hidden', p.id !== `tab-${tab.dataset.tab}`));
-  }));
-
-  createPhotoUploader(container.querySelector('#photos-before'), {
-    folderPath: `service-orders/${orderId}/before`, initialPhotos: order.photosBefore || [],
-    label: 'Fotografías antes', onChange: (photos) => updateOrder(orderId, { photosBefore: photos })
-  });
-  createPhotoUploader(container.querySelector('#photos-after'), {
-    folderPath: `service-orders/${orderId}/after`, initialPhotos: order.photosAfter || [],
-    label: 'Fotografías después', onChange: (photos) => updateOrder(orderId, { photosAfter: photos })
-  });
-
-  if (!order.signatureClientUrl) {
-    const pad = createSignaturePad(container.querySelector('#sig-client-pad'));
-    onSignaturePad(pad);
-    container.querySelector('#sig-client-clear').addEventListener('click', () => pad.clear());
-    container.querySelector('#sig-client-save').addEventListener('click', async () => {
-      if (pad.isEmpty()) { showToast('Solicita al cliente que firme primero', 'warning'); return; }
-      const file = await canvasToFile(pad.canvas, `firma-cliente-${orderId}.png`);
-      const { url } = await uploadPhoto(`service-orders/${orderId}/signatures`, file);
-      await updateOrder(orderId, { signatureClientUrl: url });
-      showToast('Firma guardada', 'success');
-      rerender();
-    });
-  }
-  if (!order.signatureTechnicianUrl) {
-    const pad = createSignaturePad(container.querySelector('#sig-tech-pad'));
-    onSignaturePad(pad);
-    container.querySelector('#sig-tech-clear').addEventListener('click', () => pad.clear());
-    container.querySelector('#sig-tech-save').addEventListener('click', async () => {
-      if (pad.isEmpty()) { showToast('Firma del técnico requerida', 'warning'); return; }
-      const file = await canvasToFile(pad.canvas, `firma-tecnico-${orderId}.png`);
-      const { url } = await uploadPhoto(`service-orders/${orderId}/signatures`, file);
-      await updateOrder(orderId, { signatureTechnicianUrl: url });
-      showToast('Firma guardada', 'success');
-      rerender();
-    });
-  }
 }
