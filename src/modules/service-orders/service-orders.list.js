@@ -12,7 +12,7 @@ import { ORDER_STATUS_META } from '../../config/constants.js';
 import { renderTable, sortRows } from '../../components/ui/table.js';
 import { icon } from '../../components/ui/icons.js';
 import { navigate } from '../../core/router.js';
-import { debounce, normalizeText, formatDate, formatCurrency } from '../../core/utils.js';
+import { debounce, normalizeText, formatDate, formatCurrency, escapeHtml } from '../../core/utils.js';
 
 let container = null;
 let allOrders = [];
@@ -25,7 +25,11 @@ function renderList(rows) {
   const listEl = container.querySelector('#orders-table');
   renderTable(listEl, {
     columns: [
-      { key: 'folioLabel', label: 'Folio' },
+      { key: 'folioLabel', label: 'Folio', render: (o) => `
+        <span class="flex items-center gap-2">
+          ${escapeHtml(o.folioLabel)}
+          ${o.pdfSentAt ? `<span title="PDF enviado al cliente" style="color:var(--color-success)">${icon('send', { size: 14 })}</span>` : ''}
+        </span>` },
       { key: 'clientName', label: 'Cliente' },
       { key: 'vehicleLabel', label: 'Vehículo' },
       { key: 'status', label: 'Estado', render: (o) => {

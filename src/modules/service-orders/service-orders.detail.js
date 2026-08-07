@@ -22,6 +22,7 @@ import { formatDate, formatCurrency, escapeHtml, downloadBlob, waLink } from '..
 import { printOrderTicket } from './order-ticket.print.js';
 import { generateOrderPdf, getOrderPdfFile } from './order-pdf.js';
 import { getEffectiveBusiness } from '../../core/settings.service.js';
+import { serverTimestamp } from '../../core/firebase.init.js';
 
 /** Same letterhead markup as quotes' detail view (logo + business name/slogan), so both document types read as one consistent brand in the app, not just in their PDFs. */
 function letterheadHtml() {
@@ -49,9 +50,10 @@ async function sendOrderByEmail(order) {
         title: `Orden ${order.folioLabel}`,
         text: `Orden de servicio ${order.folioLabel} de ${business.name} para ${order.clientName} — ${formatCurrency(order.total)}.`
       });
+      await markPdfSent(order.id, 'email');
       return;
     } catch (error) {
-      if (error.name === 'AbortError') return; // user closed the share sheet — not a failure
+      if (error.name === 'AbortError') return; // user closed the share sheet — not a failure, and not a confirmed send either
     }
   }
 
@@ -62,6 +64,7 @@ async function sendOrderByEmail(order) {
     `Saludos,\n${business.name}`
   );
   window.location.href = `mailto:${order.clientEmail || ''}?subject=${subject}&body=${body}`;
+  await markPdfSent(order.id, 'email');
   showToast('Se descargó el PDF — adjúntalo en el correo que se acaba de abrir', 'info');
 }
 
@@ -74,7 +77,18 @@ async function sendOrderByWhatsApp(order) {
   const message = `Hola ${order.clientName || ''}, te comparto la orden de servicio ${order.folioLabel} de ${business.name} ` +
     `por un total de ${formatCurrency(order.total)}. Adjunto el PDF que se acaba de descargar.`;
   window.open(waLink(order.clientPhone, message), '_blank');
+  await markPdfSent(order.id, 'whatsapp');
   showToast('Se descargó el PDF — adjúntalo en la conversación de WhatsApp que se acaba de abrir', 'info');
+}
+
+/**
+ * Stamps the order as "PDF sent to client" — this is what powers the send
+ * icon next to the folio in the orders list (service-orders.list.js). Only
+ * the two "send" actions call this, not "Descargar PDF": a local download
+ * isn't the same as something having actually gone out to the client.
+ */
+function markPdfSent(orderId, via) {
+  return updateOrder(orderId, { pdfSentAt: serverTimestamp(), pdfSentVia: via });
 }
 
 function renderStepper(container, order, onChanged) {
@@ -117,7 +131,7 @@ export async function mountOrderDetail(container, orderId, { onSignaturePad }) {
         <button class="btn btn--icon btn--ghost" id="back">${icon('chevronRight', { className: 'rotate-180' })}</button>
         <div>
           <h1 class="mb-0">${escapeHtml(order.folioLabel)}</h1>
-          <p class="mb-0 text-sm">${escapeHtml(order.clientName || '')} · ${escapeHtml(order.vehicleLabel || '')}${order.unitNumber ? ` · Unidad ${escapeHtml(order.unitNumber)}` : ''} · <span class="badge badge--${meta.color}">${meta.label}</span></p>
+          <p class="mb-0 text-sm">${escapeHtml(order.clientName || '')} · ${escapeHtml(order.vehicleLabel || '')}${order.unitNumber ? ` · Unidad ${escapeHtml(order.unitNumber)}` : ''} · <span class="badge badge--${meta.color}">${meta.label}</span>${order.pdfSentAt ? ` · <span class="text-xs text-muted">${icon('send', { size: 12 })} PDF enviado</span>` : ''}</p>
         </div>
       </div>
       <div class="flex gap-2">
@@ -210,7 +224,7 @@ export async function mountOrderDetail(container, orderId, { onSignaturePad }) {
   container.querySelector('#send-email').addEventListener('click', async () => {
     const btn = container.querySelector('#send-email');
     btn.disabled = true;
-    try { await sendOrderByEmail(order); } catch (error) {
+    try { await sendOrderByEmail(order); rerender(); } catch (error) {
       console.error('[service-orders] send by email failed', error);
       showToast('No se pudo enviar/compartir la orden', 'danger');
     } finally { btn.disabled = false; }
@@ -218,7 +232,7 @@ export async function mountOrderDetail(container, orderId, { onSignaturePad }) {
   container.querySelector('#send-whatsapp').addEventListener('click', async () => {
     const btn = container.querySelector('#send-whatsapp');
     btn.disabled = true;
-    try { await sendOrderByWhatsApp(order); } catch (error) {
+    try { await sendOrderByWhatsApp(order); rerender(); } catch (error) {
       console.error('[service-orders] send by WhatsApp failed', error);
       showToast('No se pudo preparar el envío por WhatsApp', 'danger');
     } finally { btn.disabled = false; }
