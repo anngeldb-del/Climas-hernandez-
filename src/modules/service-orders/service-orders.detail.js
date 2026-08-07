@@ -18,8 +18,64 @@ import { confirmDialog } from '../../components/ui/modal.js';
 import { showToast } from '../../components/ui/toast.js';
 import { icon } from '../../components/ui/icons.js';
 import { navigate } from '../../core/router.js';
-import { formatDate, formatCurrency, escapeHtml } from '../../core/utils.js';
+import { formatDate, formatCurrency, escapeHtml, downloadBlob, waLink } from '../../core/utils.js';
 import { printOrderTicket } from './order-ticket.print.js';
+import { generateOrderPdf, getOrderPdfFile } from './order-pdf.js';
+import { getEffectiveBusiness } from '../../core/settings.service.js';
+
+/** Same letterhead markup as quotes' detail view (logo + business name/slogan), so both document types read as one consistent brand in the app, not just in their PDFs. */
+function letterheadHtml() {
+  const business = getEffectiveBusiness();
+  return `
+    <div class="flex items-center gap-3" style="margin-bottom:var(--space-4)">
+      <img src="${business.logo}" alt="${business.name}" style="height:48px;width:auto" />
+      <div>
+        <strong>${business.name}</strong>
+        <div class="text-xs text-muted">${business.slogan}</div>
+      </div>
+    </div>
+  `;
+}
+
+/** Web Share API (attaches the actual PDF, ideal on phones) with a mailto: fallback — mirrors quotes.module.js's sendQuoteByEmail. */
+async function sendOrderByEmail(order) {
+  const business = getEffectiveBusiness();
+  const file = await getOrderPdfFile(order);
+
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: `Orden ${order.folioLabel}`,
+        text: `Orden de servicio ${order.folioLabel} de ${business.name} para ${order.clientName} — ${formatCurrency(order.total)}.`
+      });
+      return;
+    } catch (error) {
+      if (error.name === 'AbortError') return; // user closed the share sheet — not a failure
+    }
+  }
+
+  downloadBlob(file, file.name);
+  const subject = encodeURIComponent(`Orden de servicio ${order.folioLabel} — ${business.name}`);
+  const body = encodeURIComponent(
+    `Hola ${order.clientName || ''},\n\nAdjunto la orden de servicio ${order.folioLabel} por un total de ${formatCurrency(order.total)}.\n\n` +
+    `Saludos,\n${business.name}`
+  );
+  window.location.href = `mailto:${order.clientEmail || ''}?subject=${subject}&body=${body}`;
+  showToast('Se descargó el PDF — adjúntalo en el correo que se acaba de abrir', 'info');
+}
+
+/** Downloads the PDF and opens WhatsApp with the client so it can be attached — wa.me links can't attach files directly. Mirrors quotes.module.js's sendQuoteByWhatsApp. */
+async function sendOrderByWhatsApp(order) {
+  const business = getEffectiveBusiness();
+  const file = await getOrderPdfFile(order);
+  downloadBlob(file, file.name);
+
+  const message = `Hola ${order.clientName || ''}, te comparto la orden de servicio ${order.folioLabel} de ${business.name} ` +
+    `por un total de ${formatCurrency(order.total)}. Adjunto el PDF que se acaba de descargar.`;
+  window.open(waLink(order.clientPhone, message), '_blank');
+  showToast('Se descargó el PDF — adjúntalo en la conversación de WhatsApp que se acaba de abrir', 'info');
+}
 
 function renderStepper(container, order, onChanged) {
   const el = container.querySelector('#status-stepper');
@@ -67,6 +123,9 @@ export async function mountOrderDetail(container, orderId, { onSignaturePad }) {
       <div class="flex gap-2">
         <button class="btn btn--outline" id="edit-btn">${icon('edit', { size: 16 })} Editar</button>
         <button class="btn btn--outline" id="print-btn">${icon('order', { size: 16 })} Imprimir</button>
+        <button class="btn btn--outline" id="download-pdf">${icon('download', { size: 16 })} Descargar PDF</button>
+        <button class="btn btn--outline" id="send-whatsapp">${icon('whatsapp', { size: 16 })} Enviar por WhatsApp</button>
+        <button class="btn btn--outline" id="send-email">${icon('mail', { size: 16 })} Enviar por correo</button>
         <button class="btn btn--danger" id="delete-order">${icon('trash', { size: 16 })} Eliminar</button>
       </div>
     </div>
@@ -80,6 +139,7 @@ export async function mountOrderDetail(container, orderId, { onSignaturePad }) {
     </div>
 
     <div id="tab-info">
+      ${letterheadHtml()}
       <div class="grid grid--2">
         <div class="card">
           <h3>Detalles</h3>
@@ -139,6 +199,30 @@ export async function mountOrderDetail(container, orderId, { onSignaturePad }) {
   container.querySelector('#back').addEventListener('click', () => navigate('service-orders'));
   container.querySelector('#edit-btn').addEventListener('click', () => navigate('service-orders', `${order.id}/edit`));
   container.querySelector('#print-btn').addEventListener('click', () => printOrderTicket(order));
+  container.querySelector('#download-pdf').addEventListener('click', async () => {
+    const btn = container.querySelector('#download-pdf');
+    btn.disabled = true;
+    try { await generateOrderPdf(order); } catch (error) {
+      console.error('[service-orders] pdf generation failed', error);
+      showToast('No se pudo generar el PDF', 'danger');
+    } finally { btn.disabled = false; }
+  });
+  container.querySelector('#send-email').addEventListener('click', async () => {
+    const btn = container.querySelector('#send-email');
+    btn.disabled = true;
+    try { await sendOrderByEmail(order); } catch (error) {
+      console.error('[service-orders] send by email failed', error);
+      showToast('No se pudo enviar/compartir la orden', 'danger');
+    } finally { btn.disabled = false; }
+  });
+  container.querySelector('#send-whatsapp').addEventListener('click', async () => {
+    const btn = container.querySelector('#send-whatsapp');
+    btn.disabled = true;
+    try { await sendOrderByWhatsApp(order); } catch (error) {
+      console.error('[service-orders] send by WhatsApp failed', error);
+      showToast('No se pudo preparar el envío por WhatsApp', 'danger');
+    } finally { btn.disabled = false; }
+  });
   container.querySelector('#delete-order').addEventListener('click', async () => {
     const confirmed = await confirmDialog({
       title: 'Eliminar orden',
