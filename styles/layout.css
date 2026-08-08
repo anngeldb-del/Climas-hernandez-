@@ -169,7 +169,15 @@
 @media (max-width: 720px) {
   #app-shell {
     grid-template-columns: 1fr;
-    grid-template-rows: var(--topbar-height) 1fr;
+    /* auto — not a fixed var(--topbar-height) — so the topbar row can grow
+       to fit its safe-area-inset-top padding on notched/Dynamic-Island
+       phones. This mirrors the base #app-shell rule above; this mobile
+       breakpoint used to hardcode the old fixed height back, which
+       silently undid that fix on every phone (i.e. on every real device
+       this app runs on) — the topbar's content needed more room than 64px
+       once the safe-area padding was added, so it got clipped/overlapped
+       by whatever sat in the row below it. */
+    grid-template-rows: auto 1fr;
     grid-template-areas:
       'topbar'
       'main';
