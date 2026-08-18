@@ -31,6 +31,22 @@ export const BUSINESS = Object.freeze({
   }
 });
 
+/**
+ * Kill switch: when true, app.js renders a "suspended" notice for anyone
+ * who opens the app and skips loading Firebase/auth/shell entirely — flip
+ * back to false to restore normal access.
+ */
+export const APP_SUSPENDED = true;
+
+/** Shown on the suspension screen so a locked-out client knows who to contact. */
+export const SUSPENSION_CONTACT = Object.freeze({
+  name: 'Ing. Luis Ángel Díaz Bernal',
+  phone: '871 231 8050',
+  altPhone: '220 633 9488',
+  phoneHref: 'tel:+528712318050',
+  whatsappHref: 'https://wa.me/528712318050'
+});
+
 /** Roles recognized by the security rules and the UI navigation guard. */
 export const ROLES = Object.freeze({
   ADMIN: 'admin',
