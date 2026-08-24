@@ -3,8 +3,7 @@
  * -----------------------------------------------------------------------
  * Builds a professional, printable PDF for a quote: logo, business data,
  * client/vehicle, itemized concepts, IVA and ISR retention (both
- * optional), total, a WhatsApp confirmation QR code, and the client's
- * signature if one was captured.
+ * optional), total, notes/comments, and a WhatsApp confirmation QR code.
  *
  * jsPDF and the QR generator are dynamically imported only when a quote
  * is actually exported, so no other screen pays their download cost.
@@ -44,8 +43,8 @@ async function loadImageAsDataUrl(path) {
  * Assembles the jsPDF document for a quote. Does not save/download —
  * callers decide what to do with the result (save to disk, turn into a
  * Blob/File for sharing, etc).
- * @param {object} quote {folioLabel, createdAt, clientName, clientPhone, vehicleLabel, items,
- *   subtotal, discount, taxEnabled, taxRate, tax, isrEnabled, isrRate, isr, total, signatureUrl}
+ * @param {object} quote {folioLabel, createdAt, clientName, clientPhone, vehicleLabel, unitNumber, items,
+ *   subtotal, discount, taxEnabled, taxRate, tax, isrEnabled, isrRate, isr, total, notes}
  */
 export async function buildQuotePdfDoc(quote) {
   await ensureLibs();
@@ -97,6 +96,12 @@ export async function buildQuotePdfDoc(quote) {
   doc.text('Vehículo:', marginX, y);
   doc.setFont(undefined, 'normal');
   doc.text(quote.vehicleLabel || '—', marginX + 20, y);
+  if (quote.unitNumber) {
+    doc.setFont(undefined, 'bold');
+    doc.text('Número de unidad:', 120, y);
+    doc.setFont(undefined, 'normal');
+    doc.text(String(quote.unitNumber), 158, y);
+  }
 
   y += 10;
   doc.setFillColor(238, 241, 244);
@@ -150,6 +155,18 @@ export async function buildQuotePdfDoc(quote) {
   doc.setFontSize(12);
   doc.setFont(undefined, 'bold');
   totalsLine('TOTAL:', formatCurrency(quote.total));
+
+  if (quote.notes) {
+    y += 12;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(0);
+    doc.text('Notas / Comentarios:', marginX, y);
+    doc.setFont(undefined, 'normal');
+    const noteLines = doc.splitTextToSize(String(quote.notes), 180);
+    doc.text(noteLines, marginX, y + 5);
+    y += noteLines.length * 5;
+  }
 
   y += 14;
   doc.setFontSize(9);

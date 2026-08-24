@@ -110,7 +110,3 @@ export function initRouter(rootElement) {
     else resolveRoute();
   });
 }
-
-export function currentModuleKey() {
-  return activeKey;
-}

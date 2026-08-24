@@ -42,10 +42,3 @@ export async function deletePhoto(path) {
     console.warn('[storage] delete failed', path, error);
   }
 }
-
-/** Converts a <canvas> signature pad into a File ready for uploadPhoto(). */
-export function canvasToFile(canvas, filename) {
-  return new Promise((resolve) => {
-    canvas.toBlob((blob) => resolve(new File([blob], filename, { type: 'image/png' })), 'image/png');
-  });
-}

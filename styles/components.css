@@ -290,12 +290,6 @@ table.table tbody tr[data-clickable] { cursor: pointer; }
   flex-shrink: 0;
 }
 
-/* ---- Signature pad -------------------------------------------------------------- */
-.signature-pad {
-  background: #fff; border: 1px dashed var(--color-border); border-radius: var(--radius-md);
-  touch-action: none; width: 100%; height: 160px; cursor: crosshair;
-}
-
 /* ---- File / photo upload dropzone ------------------------------------------------ */
 .dropzone {
   border: 2px dashed var(--color-border); border-radius: var(--radius-md);

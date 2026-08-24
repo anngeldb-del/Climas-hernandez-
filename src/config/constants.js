@@ -140,7 +140,6 @@ export const COLLECTIONS = Object.freeze({
   VEHICLES: 'vehicles',
   SERVICE_ORDERS: 'serviceOrders',
   CATALOG: 'serviceCatalog',
-  INVENTORY: 'inventory',
   QUOTES: 'quotes',
   PAYMENTS: 'payments',
   WARRANTIES: 'warranties',
