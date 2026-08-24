@@ -36,7 +36,7 @@ export const BUSINESS = Object.freeze({
  * who opens the app and skips loading Firebase/auth/shell entirely — flip
  * back to false to restore normal access.
  */
-export const APP_SUSPENDED = true;
+export const APP_SUSPENDED = false;
 
 /** Shown on the suspension screen so a locked-out client knows who to contact. */
 export const SUSPENSION_CONTACT = Object.freeze({
