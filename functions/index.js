@@ -106,25 +106,6 @@ exports.onServiceOrderStatusChange = onDocumentUpdated('serviceOrders/{orderId}'
 // ---------------------------------------------------------------------
 
 /**
- * Daily low-stock sweep. Logs matches today; extend the TODO below once
- * a notification channel is chosen so staff get a proactive heads-up
- * instead of only seeing the in-app alert banner on inventory.module.js.
- */
-exports.scheduledLowStockCheck = onSchedule('every day 08:00', async () => {
-  const snapshot = await db.collection('inventory').get();
-  const lowStock = snapshot.docs
-    .map((doc) => doc.data())
-    .filter((item) => Number(item.stock) <= Number(item.minStock ?? 0));
-
-  if (lowStock.length === 0) return;
-
-  console.log(`[scheduledLowStockCheck] ${lowStock.length} item(s) below minimum stock:`,
-    lowStock.map((i) => `${i.name} (${i.stock}/${i.minStock})`).join(', '));
-
-  // TODO: send an email/WhatsApp digest to the shop owner here.
-});
-
-/**
  * Placeholder for a programmatic Firestore export. Firebase's own
  * console (Firestore -> Backups) offers one-click scheduled backups with
  * point-in-time recovery and is the recommended default — enable it

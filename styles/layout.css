@@ -250,7 +250,7 @@
   .activity-row { flex-direction: column; align-items: flex-start; gap: var(--space-1); }
   .activity-row__meta { text-align: left; }
 
-  /* Tables -> stacked cards. Every list screen (clients, orders, inventory,
+  /* Tables -> stacked cards. Every list screen (clients, orders,
      payments, quotes, catalog, users, audit) and the parts/concepts editor
      share the same .table component, so this one change makes all of them
      usable on a phone instead of needing horizontal scrolling. */

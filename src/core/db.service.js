@@ -12,7 +12,7 @@
  */
 
 import {
-  db, collection, doc, getDoc, getDocs, addDoc, setDoc, updateDoc, deleteDoc,
+  db, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
   query, onSnapshot, serverTimestamp
 } from './firebase.init.js';
 import { logAudit } from './audit.service.js';
@@ -54,14 +54,6 @@ export async function create(collectionName, data, { auditDetails } = {}) {
   const ref = await addDoc(collection(db, collectionName), payload);
   await logAudit(collectionName, ref.id, 'create', auditDetails ?? { fields: Object.keys(data) });
   return ref.id;
-}
-
-/** Create with a caller-chosen id (used when the id must match another system, e.g. auth uid). */
-export async function createWithId(collectionName, id, data, { auditDetails } = {}) {
-  const payload = { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
-  await setDoc(docRef(collectionName, id), payload);
-  await logAudit(collectionName, id, 'create', auditDetails ?? { fields: Object.keys(data) });
-  return id;
 }
 
 export async function update(collectionName, id, data, { auditDetails } = {}) {

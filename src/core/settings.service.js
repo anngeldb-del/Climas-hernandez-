@@ -12,7 +12,7 @@
  * and this gets that benefit without making it the source of truth.
  */
 
-import { db, doc, getDoc, setDoc, onSnapshot, storage, ref, uploadBytes, getDownloadURL } from './firebase.init.js';
+import { db, doc, setDoc, onSnapshot, storage, ref, uploadBytes, getDownloadURL } from './firebase.init.js';
 import { BUSINESS } from '../config/constants.js';
 import { compressImage } from './utils.js';
 
@@ -57,22 +57,10 @@ function writeCache(data) {
 
 /** Seeded synchronously at import time so the very first render (before Firestore resolves) already has sensible values. */
 let current = { ...FALLBACK_SETTINGS, ...readCache() };
-const listeners = new Set();
-
-function notify() {
-  listeners.forEach((cb) => cb(current));
-}
 
 /** Synchronous read for code that can't await (e.g. seeding a form's default field values). */
 export function getCachedSettings() {
   return current;
-}
-
-/** Reactive subscription; fires immediately with whatever's cached, then again whenever Firestore updates. */
-export function subscribeSettings(callback) {
-  listeners.add(callback);
-  callback(current);
-  return () => listeners.delete(callback);
 }
 
 let unsubscribeFirestore = null;
@@ -85,7 +73,6 @@ export function initSettings() {
     (snap) => {
       current = { ...FALLBACK_SETTINGS, ...(snap.exists() ? snap.data() : {}) };
       writeCache(current);
-      notify();
     },
     (error) => {
       // Offline or no permission yet (e.g. settings doc doesn't exist and rules
@@ -101,7 +88,6 @@ export async function saveSettings(partial) {
   // keeps the Configuración screen feeling instant instead of waiting a round trip.
   current = { ...current, ...partial };
   writeCache(current);
-  notify();
 }
 
 /** Uploads a new logo to Storage and saves its URL as the active logo override. */
@@ -135,10 +121,3 @@ export function getEffectiveBusiness() {
     logoHd: current.logoUrl || BUSINESS.logo.hd
   };
 }
-
-async function ensureSettingsDocExists() {
-  const snap = await getDoc(doc(db, 'settings', SETTINGS_DOC_ID));
-  if (!snap.exists()) await setDoc(doc(db, 'settings', SETTINGS_DOC_ID), TAX_DEFAULTS);
-}
-
-export { ensureSettingsDocExists };

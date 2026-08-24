@@ -7,7 +7,7 @@
  * and folio issuance.
  */
 
-import { create, update, remove, getById, subscribe } from '../../core/db.service.js';
+import { create, remove, getById, subscribe } from '../../core/db.service.js';
 import { COLLECTIONS } from '../../config/constants.js';
 import { nextSequence, formatFolio } from '../../core/counters.service.js';
 
@@ -26,10 +26,6 @@ export async function createQuote(data) {
   const folioLabel = formatFolio(FOLIO_PREFIX, folioNumber);
   const id = await create(COLLECTIONS.QUOTES, { ...data, folioNumber, folioLabel });
   return { id, folioLabel };
-}
-
-export function updateQuote(id, data) {
-  return update(COLLECTIONS.QUOTES, id, data);
 }
 
 export function deleteQuote(id) {

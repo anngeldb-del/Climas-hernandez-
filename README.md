@@ -94,7 +94,7 @@ firebase emulators:start --only hosting
 | Rol | Acceso |
 |---|---|
 | **Administrador** | Todo el sistema, incluida la gestión de usuarios y la bitácora |
-| **Recepción** | Clientes, vehículos, órdenes, cotizaciones, pagos, catálogo, inventario, agenda, reportes |
+| **Recepción** | Clientes, vehículos, órdenes, cotizaciones, pagos, catálogo, agenda, reportes |
 | **Técnico** | Panel, órdenes de servicio (actualizar diagnóstico/estado/fotos), agenda, garantías |
 | **Auditor** | Solo lectura: panel, reportes y bitácora de cambios |
 
@@ -106,7 +106,7 @@ para una mejor experiencia — la seguridad no depende de eso).
 
 Panel principal · Clientes · Vehículos · Órdenes de servicio (folio
 consecutivo, estados, fotos antes/después, firmas, impuestos) ·
-Catálogo de servicios · Inventario (alertas de stock mínimo) ·
+Catálogo de servicios ·
 Cotizaciones (IVA/ISR/descuento editables, PDF con logo, envío por
 WhatsApp/correo, QR de confirmación y firma) · Pagos (anticipos, abonos,
 saldo) · Garantías · Agenda (entregas, citas, recordatorios) · Reportes

@@ -103,6 +103,11 @@ async function mountNewQuote() {
 
       <div id="tax-section"></div>
 
+      <div class="field">
+        <label class="field__label" for="quote-notes">Notas / Comentarios</label>
+        <textarea class="input" id="quote-notes" name="notes" rows="3" placeholder="Observaciones para el cliente (opcional)"></textarea>
+      </div>
+
       <div class="flex justify-end gap-2">
         <button type="button" class="btn btn--outline" id="cancel">Cancelar</button>
         <button type="submit" class="btn btn--primary">Guardar cotización</button>
@@ -157,6 +162,7 @@ async function mountNewQuote() {
         vehicleId: selectedVehicle?.id || null,
         vehicleLabel: selectedVehicle ? vehicleLabel(selectedVehicle) : '',
         unitNumber: selectedVehicle?.unitNumber || '',
+        notes: container.querySelector('#quote-notes').value.trim(),
         items: values.items,
         taxEnabled: values.taxEnabled, taxRate: values.taxRate,
         isrEnabled: values.isrEnabled, isrRate: values.isrRate,
@@ -247,6 +253,7 @@ async function mountDetail(quoteId) {
         <tbody>${(quote.items || []).map((i) => `<tr><td data-label="Descripción">${escapeHtml(i.description || '')}</td><td data-label="Cant.">${Number(i.quantity) || 0}</td><td data-label="P. Unit.">${formatCurrency(i.unitPrice)}</td><td data-label="Importe">${formatCurrency((Number(i.quantity) || 0) * (Number(i.unitPrice) || 0))}</td></tr>`).join('')}</tbody>
       </table>
       <div class="text-right">${totalsLinesHtml(quote)}</div>
+      ${quote.notes ? `<h3>Notas / Comentarios</h3><p class="text-sm">${escapeHtml(quote.notes)}</p>` : ''}
     </div>
   `;
 
